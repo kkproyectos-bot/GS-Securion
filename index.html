@@ -1,0 +1,1750 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GS – Control del personal por carpetas</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --ink:#1d2733; --muted:#5d6b7a; --line:#c9d1da;
+    --accent:#1f4e79; --accent-ink:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI",Roboto,Arial,sans-serif}
+  header{background:var(--accent);color:var(--accent-ink);padding:18px 24px}
+  header h1{margin:0;font-size:20px}
+  header p{margin:4px 0 0;opacity:.85;font-size:13px}
+  main{max-width:1300px;margin:0 auto;padding:20px 16px 40px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+  h2{font-size:16px;margin:0 0 12px;color:var(--accent)}
+  h3{font-size:14px;margin:18px 0 8px;color:var(--ink)}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  .row > div{flex:0 0 auto}
+  select{padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}
+  input[type=date],input[type=text]{padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit}
+  td input[type=date]{padding:2px 4px;font-size:12px}
+  td select{padding:2px 4px;font-size:12px}
+  textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:10px;font:13px/1.4 Consolas,monospace;resize:vertical}
+  textarea.lectura{font:15px/1.6 "Times New Roman",serif;text-align:justify}
+  button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:9px 16px;font:inherit;cursor:pointer}
+  button.sec{background:#e6ecf2;color:var(--ink)}
+  button.mini{padding:3px 9px;font-size:12px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .msg{font-size:13px;margin-top:8px}
+  .msg.err{color:#b00020}
+  .resumen{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .kpi{border-radius:8px;padding:12px;border:1px solid var(--line);background:#f8fafc}
+  .kpi .n{font-size:24px;font-weight:600}
+  .kpi .t{font-size:13px;color:var(--muted)}
+  .tabla-wrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{border:1px solid var(--line);padding:5px 7px;text-align:center;white-space:nowrap}
+  th{background:#eef2f6}
+  td.nom{text-align:left}
+  td.obs{text-align:left;white-space:normal;min-width:220px;font-size:12px}
+  td.no{font-weight:600;color:#b00020}
+  .leyenda{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:12px;color:var(--muted);margin:0 0 10px}
+  .leyenda label{display:flex;align-items:center;gap:6px;margin:0;font-size:12px;cursor:pointer}
+  .leyenda input[type=color]{width:22px;height:18px;padding:0;border:1px solid var(--line);border-radius:3px;background:none;cursor:pointer}
+  .leyenda input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  .leyenda input[type=color]::-webkit-color-swatch{border:none;border-radius:2px}
+  .leyenda .nota{flex-basis:100%;font-size:11px}
+  .zona{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);margin:10px 0}
+  .zona.sobre{border-color:var(--accent);background:#eef4fa}
+  .doc-bloque{border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:12px}
+  .doc-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+  .doc-cab .tipo{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .sasa{display:grid;grid-template-columns:minmax(220px,380px) 1fr;gap:16px;align-items:start}
+  .sasa canvas{width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in}
+  .sasa canvas.grande{cursor:zoom-out}
+  .sasa.grande{grid-template-columns:1fr}
+  @media (max-width:720px){ .sasa{grid-template-columns:1fr} }
+  details summary{cursor:pointer;font-size:13px;color:var(--accent);margin:4px 0}
+  details.persona{border-bottom:1px solid var(--line);padding:4px 0}
+  .hidden{display:none}
+  .columnas{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:12px;color:var(--muted);margin:0 0 10px}
+  .columnas{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#f8fafc}
+  .columnas > span{flex-basis:100%}
+  .columnas br{flex-basis:100%;content:''}
+  .chip{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .chip.off{background:#fff;color:var(--muted);border-color:var(--line);text-decoration:line-through}
+  th .x{margin-left:6px;cursor:pointer;color:#9fb3c8;font-weight:400}
+  th .x:hover{color:#b00020}
+  #tablaNomina th.c0,#tablaNomina td.c0{position:sticky;left:0;z-index:1;box-shadow:1px 0 0 var(--line)}
+  #tablaNomina td.c0{background:#fff}
+  #tablaNomina th.c0{background:#eef2f6;z-index:2}
+  td.edit input,td.edit select{max-width:130px}
+  td.falta{outline:2px solid #e08a8a;outline-offset:-3px}
+  .mini{font-size:10px;color:var(--muted)}
+  td.cambio{outline:3px solid #2f6fdb;outline-offset:-3px;font-weight:600}
+  td.obs b.nov{color:#b00020}
+</style>
+<style id="estiloCols"></style>
+</head>
+<body>
+<header>
+  <h1>GS – Control del personal por carpetas</h1>
+  <p>Cargá la nómina (Excel) y los archivos nuevos; la página actualiza la nómina y arma el informe. · <b>Versión 7 (22/10/2026)</b></p>
+</header>
+<main>
+
+<section class="card">
+  <h2>1. Datos</h2>
+  <div class="row" style="margin-bottom:12px">
+    <div><label for="corte">Fecha de corte</label><input type="date" id="corte"></div>
+    <div><label for="empresa">Empresa</label><input type="text" id="empresa" size="22" placeholder="Se completa con el alta"></div>
+    <div><label for="vigencia">Vigencia de reincidencia y SASA (meses)</label><input type="text" id="vigencia" value="12" size="4"></div>
+    <div><label for="aviso">Aviso previo al vencimiento (meses)</label><input type="text" id="aviso" value="1" size="4"></div>
+    <div><label for="mesesPrueba">Período de prueba (meses)</label><input type="text" id="mesesPrueba" value="6" size="4"></div>
+    <div><label for="baseAnt">Antigüedad calculada según</label>
+      <select id="baseAnt"><option value="emp">Ingreso a la empresa (alta)</option><option value="obj">Ingreso al objetivo</option></select></div>
+  </div>
+  <h3>1) Nómina</h3>
+  <label for="inBase">Excel de la nómina (el que descarga esta página): es la base con los datos ya cargados</label>
+  <input type="file" id="inBase" accept=".xlsx,.xls,.csv">
+  <div id="msgBase" class="msg"></div>
+  <div id="listaBase"></div>
+  <h3>2) Archivos nuevos</h3>
+  <div class="zona" id="zona">
+    Arrastrá acá los archivos nuevos: PDF, fotos, carpetas o un ZIP. Podés cargarlos en varias tandas.<br>
+    <div class="row" style="justify-content:center;margin-top:10px">
+      <div><button id="btnArchivos" class="sec">Elegir archivos</button></div>
+      <div><button id="btnCarpeta" class="sec">Elegir carpeta</button></div>
+      <div><button id="btnZip" class="sec">Elegir ZIP</button></div>
+      <div><button id="btnQuitarNuevos" class="sec">Quitar los archivos nuevos</button></div>
+    </div>
+    <input type="file" id="inArchivos" multiple class="hidden">
+    <input type="file" id="inZip" accept=".zip,application/zip" class="hidden">
+    <input type="file" id="inCarpeta" webkitdirectory directory multiple class="hidden">
+  </div>
+  <div class="hint">Cada archivo se asigna a una persona de la nómina por el DNI que se lee del documento, por el nombre de la carpeta o por el nombre del archivo. Si cambia un dato (credencial, SASA, reincidencia, alta), se actualiza y queda marcado "ACTUALIZADO"; si no cambia nada, la nómina queda igual. Las carpetas o archivos de personas que no están en la nómina se agregan como "NUEVO". Un SASA nuevo se lee y se aplica a quienes figuran en su listado. Los archivos se leen en tu computadora; no se envían a ningún servidor.</div>
+  <div style="margin-top:10px"><label for="noPersonas">Carpetas que no son personal (separadas por punto y coma)</label>
+    <input type="text" id="noPersonas" style="width:100%"></div>
+  <div id="msg" class="msg"></div>
+  <div><button class="sec mini hidden" id="btnDetener">Detener la lectura de escaneos</button></div>
+  <div id="excluidas" class="msg"></div>
+  <h3>3) Otros Excel (opcional)</h3>
+  <label for="inExcel">Por ejemplo, un Excel con el ingreso al objetivo</label>
+  <input type="file" id="inExcel" accept=".xlsx,.xls,.csv" multiple>
+  <div class="hint">Se cruzan con la nómina por DNI (o por apellido y nombre). En credencial y reincidencia se toma el vencimiento más reciente y las diferencias quedan en Observaciones.</div>
+  <div id="msgExcel" class="msg"></div>
+  <div id="listaExcel"></div>
+</section>
+
+<section class="card hidden" id="secSasa">
+  <h2>2. Comprobantes SASA</h2>
+  <div class="hint" style="margin:0 0 8px">Cada SASA se lee automáticamente (puede tardar unos segundos): el n.º de comprobante, la fecha del sello y los DNI del listado. Se asigna a quienes lo tienen en su carpeta y a quienes figuran en el listado aunque no lo tengan. Verificá el comprobante y la fecha con la imagen (clic para agrandarla).</div>
+  <div id="listaSasa"></div>
+</section>
+
+<section class="card hidden" id="secNomina">
+  <h2>3. Nómina</h2>
+  <div class="leyenda">
+    <label><input type="color" data-color="sinAlerta"> Sin alerta</label>
+    <label><input type="color" data-color="amarillo"> Vence dentro del aviso previo</label>
+    <label><input type="color" data-color="rojo"> Vencido a la fecha de corte</label>
+    <label><input type="color" data-color="credDpgsp"> Credencial DPGSP</label>
+    <label><input type="color" data-color="credSasa"> Comprobante SASA</label>
+    <label><input type="color" data-color="ingIgual"> Ingresos coinciden</label>
+    <label><input type="color" data-color="ingDistinto"> Ingresos distintos</label>
+    <button class="sec mini" data-reset="sinAlerta,amarillo,rojo,credDpgsp,credSasa,ingIgual,ingDistinto">Restablecer colores</button>
+    <span class="nota">Hacé clic en un cuadradito para cambiar el color. Los casilleros con borde rojo son datos que faltan o no se pudieron leer: completalos a mano y la tabla se recalcula. Los archivos que hay que revisar figuran por nombre en Observaciones.</span>
+  </div>
+  <div class="row" style="margin:0 0 10px">
+    <div><label for="fNom">Mostrar</label>
+      <select id="fNom">
+        <option value="">Todos</option>
+        <option value="rojo">Algún vencimiento vencido (rojo)</option>
+        <option value="amarillo">Algún vencimiento por vencer (amarillo)</option>
+        <option value="credRojo">Credencial / SASA vencido</option>
+        <option value="rnrRojo">Reincidencia vencida</option>
+        <option value="dpgsp">Con credencial DPGSP</option>
+        <option value="sasa">Con comprobante SASA</option>
+        <option value="ingIgual">Ingresos coinciden (verde)</option>
+        <option value="ingDistinto">Ingresos distintos (naranja)</option>
+        <option value="falta">Con documentos faltantes</option>
+        <option value="obs">Con observaciones</option>
+        <option value="revisar">Con archivos para revisar</option>
+        <option value="nuevo">NUEVOS</option>
+        <option value="actualizado">ACTUALIZADOS</option>
+        <option value="sinArchivos">Con datos sin archivos</option>
+      </select></div>
+    <div><label>En el informe (PDF y Excel) incluir</label>
+      <label style="display:inline;margin-right:12px"><input type="radio" name="alcanceNom" value="completa" checked> Tabla completa</label>
+      <label style="display:inline"><input type="radio" name="alcanceNom" value="filtrada"> Sólo lo filtrado</label></div>
+  </div>
+  <div class="columnas" id="panelCols"><b>Ocultar / mostrar columnas</b> <span>(tocá un botón; también podés tocar la × de cada encabezado. Sólo en pantalla: el Excel y el PDF salen completos)</span><br></div>
+  <div id="resumenNov" class="msg" style="margin:0 0 6px;font-weight:600"></div>
+  <div id="cuentaNom" class="hint" style="margin:0 0 8px"></div>
+  <div class="tabla-wrap"><table id="tablaNomina"></table></div>
+  <div id="avisosNomina" class="msg"></div>
+</section>
+
+<section class="card hidden" id="secDocs">
+  <h2>4. Documentos por persona</h2>
+  <div class="hint" style="margin:0 0 8px">Si un archivo quedó mal clasificado, cambiá su tipo y la nómina se recalcula.</div>
+  <div id="resumenDocs" class="msg"></div>
+  <div id="listaPersonas"></div>
+</section>
+
+<section class="card hidden" id="secCred">
+  <h2>5. Situación de las credenciales</h2>
+  <div class="resumen" id="kpisCred"></div>
+  <h3>Lectura para el informe</h3>
+  <div class="hint" style="margin:0 0 8px">El texto se puede editar antes de descargar. Se vuelve a redactar si cambian los datos.</div>
+  <textarea id="textoCred" class="lectura" rows="9"></textarea>
+</section>
+
+<section class="card hidden" id="secAnt">
+  <h2>6. Antigüedad del personal</h2>
+  <div class="leyenda">
+    <label><input type="color" data-color="ant0"> Menos de un año</label>
+    <label><input type="color" data-color="ant1"> Entre uno y dos años</label>
+    <label><input type="color" data-color="ant2"> Más de dos años</label>
+    <button class="sec mini" data-reset="ant0,ant1,ant2">Restablecer colores</button>
+  </div>
+  <div class="row" style="margin:0 0 10px">
+    <div><label for="fAnt">Mostrar</label>
+      <select id="fAnt"><option value="">Todos</option><option value="ant0">Menos de un año</option><option value="ant1">Entre uno y dos años</option><option value="ant2">Más de dos años</option><option value="sd">Sin fecha de ingreso</option></select></div>
+    <div><label>En el informe (PDF y Excel) incluir</label>
+      <label style="display:inline;margin-right:12px"><input type="radio" name="alcanceAnt" value="completa" checked> Tabla completa</label>
+      <label style="display:inline"><input type="radio" name="alcanceAnt" value="filtrada"> Sólo lo filtrado</label></div>
+  </div>
+  <div id="cuentaAnt" class="hint" style="margin:0 0 8px"></div>
+  <div class="tabla-wrap"><table id="tablaAnt"></table></div>
+  <h3>Lectura para el informe</h3>
+  <textarea id="textoAnt" class="lectura" rows="4"></textarea>
+</section>
+
+<section class="card hidden" id="secCob">
+  <h2>7. Cobertura de ART y seguro de vida</h2>
+  <label for="archivoDoc">Cargá el certificado de la ART y la constancia del seguro de vida (.pdf o .docx)</label>
+  <input type="file" id="archivoDoc" multiple accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+  <div id="msgDoc" class="msg"></div>
+  <div id="listaDocs"></div>
+  <div id="avisoCob" class="msg"></div>
+  <div class="resumen" id="kpisCob" style="margin-top:12px"></div>
+  <div class="row" style="margin:16px 0 10px">
+    <div><label for="fArt">ART</label>
+      <select id="fArt"><option value="">Todos</option><option value="si">Con ART</option><option value="no">Sin ART</option></select></div>
+    <div><label for="fSv">Seguro de vida</label>
+      <select id="fSv"><option value="">Todos</option><option value="si">Con seguro de vida</option><option value="no">Sin seguro de vida</option></select></div>
+    <div><label>En el informe (PDF y Excel) incluir</label>
+      <label style="display:inline;margin-right:12px"><input type="radio" name="alcanceCob" value="completa" checked> Tabla completa</label>
+      <label style="display:inline"><input type="radio" name="alcanceCob" value="filtrada"> Sólo lo filtrado</label></div>
+  </div>
+  <div id="cuentaCob" class="hint" style="margin:0 0 8px"></div>
+  <div class="tabla-wrap"><table id="tablaCob"></table></div>
+  <h3>Lectura para el informe</h3>
+  <div class="hint" style="margin:0 0 8px">Los porcentajes se calculan siempre sobre toda la nómina, aunque haya filtros.</div>
+  <textarea id="textoCob" class="lectura" rows="6"></textarea>
+</section>
+
+<section class="card hidden" id="secDescargas">
+  <h2>8. Descargas</h2>
+  <div class="row">
+    <div><button id="btnPdf">Descargar PDF</button></div>
+    <div><button id="btnXlsx">Descargar Excel</button></div>
+  </div>
+  <div id="msgDesc" class="msg"></div>
+</section>
+
+</main>
+
+<script>
+/* ===================== Configuración ===================== */
+const COLORES_DEF = { sinAlerta:'FFFFFF', amarillo:'FFF2A0', rojo:'FF8B8B', credDpgsp:'DDEBF7', credSasa:'E4D7F5',
+  ingIgual:'C6EFCE', ingDistinto:'FCD5B4', ant0:'FFFFFF', ant1:'FFF2A0', ant2:'A9D18E' };
+const COLORES = Object.assign({}, COLORES_DEF);
+
+const TIPOS = { cred:'Credencial DPGSP', sasa:'SASA', alta:'Alta (ARCA)', rnr:'Reincidencia', dj:'Declaración jurada',
+  dni:'DNI', lic:'Licencia de conducir', curso:'Curso / certificado', clu:'CLU (ANMaC)', cv:'CV', otro:'Sin clasificar' };
+const OTROS_VISIBLES = ['dni','dj','curso'];   // se informan como presentes, sin alertas
+
+const ESTADOS = {
+  vig:'Credencial vigente', sas:'Vigente por comprobante SASA', ven:'Credencial / SASA vencido',
+  pen:'SASA sin fecha de sello', sij:'Sin credencial (período de prueba)', snj:'Sin credencial (fuera del período de prueba)',
+  otr:'Sin datos suficientes'
+};
+const ORDEN = ['vig','sas','ven','pen','sij','snj','otr'];
+const TRAMOS = [ {key:'ant0', nombre:'Menos de un año'}, {key:'ant1', nombre:'Entre uno y dos años'}, {key:'ant2', nombre:'Más de dos años'} ];
+const COLS_NOM = ['APELLIDO Y NOMBRE','DNI','INGRESO (ALTA ARCA)','INGRESO AL OBJETIVO','N.º CREDENCIAL / COMPROBANTE',
+  'VENCIMIENTO CREDENCIAL / SASA','REINCIDENCIA (EMISIÓN)','VENCE REINCIDENCIA','OBSERVACIONES'];
+const NO_PERSONAS_DEF='Registro de accion; certificados de cursos; CLU; DOCUMENTACION DE VEHICULOS; Bajas';
+
+/* ===================== Utilidades ===================== */
+function sinAcentos(s){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function norm(s){return sinAcentos(String(s||'').toLowerCase()).replace(/[^a-z0-9]+/g,' ').trim();}
+function parsearFecha(txt){
+  if(txt==null||txt==='') return null;
+  if(txt instanceof Date) return isNaN(txt)?null:new Date(txt.getFullYear(),txt.getMonth(),txt.getDate());
+  const s=String(txt).trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);     // formato de los campos de fecha (aaaa-mm-dd)
+  if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/(?:^|\D)(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4}|\d{2})(?!\d)/);
+  if(m){ let a=+m[3]; if(a<100) a+=2000; const d=new Date(a,+m[2]-1,+m[1]); return (isNaN(d)||d.getMonth()!==+m[2]-1)?null:d; }
+  if(/^\d{5}(\.\d+)?$/.test(s)){ const d=new Date(1899,11,30); d.setDate(d.getDate()+Math.floor(+s)); return d; } // n.º de serie de Excel
+  return null;
+}
+const MESES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+function fechaEnLetras(t){
+  const m=sinAcentos(String(t)).toLowerCase().match(/(\d{1,2})\s+de\s+([a-z]+)\s+(?:de|del)\s+(\d{4})/);
+  if(!m||!MESES[m[2]]) return null;
+  return new Date(+m[3],MESES[m[2]]-1,+m[1]);
+}
+function fmtFecha(d){ if(!d) return ''; return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+function isoFecha(d){ return d? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : ''; }
+function sumarMeses(d,n){
+  const r=new Date(d.getFullYear(),d.getMonth()+n,1);
+  const ult=new Date(r.getFullYear(),r.getMonth()+1,0).getDate();
+  r.setDate(Math.min(d.getDate(),ult));
+  return r;
+}
+function mesesCompletos(desde,hasta){
+  let m=(hasta.getFullYear()-desde.getFullYear())*12+(hasta.getMonth()-desde.getMonth());
+  if(hasta.getDate()<desde.getDate()) m--;
+  return m;
+}
+function fmtAntiguedad(m){ const a=Math.floor(m/12), r=m%12; return `${a} año${a===1?'':'s'} y ${r} mes${r===1?'':'es'}`; }
+function pct(n,total){ return total? (n*100/total):0; }
+function fmtPct(x){ return x.toFixed(2).replace('.',','); }
+function nombrePropio(s){ return String(s).toLowerCase().replace(/(^|[\s,.-])([a-záéíóúñü])/g,(m,a,b)=>a+b.toUpperCase()); }
+function listaNombres(arr){ return arr.length===1?arr[0]:arr.slice(0,-1).join(', ')+' y '+arr[arr.length-1]; }
+function unirFrases(arr){ return arr.length<2?arr.join(''):arr.slice(0,-1).join(', ')+' y '+arr[arr.length-1]; }
+function hexDe(clave){ const h=clave?COLORES[clave]:null; return (!h||h.toUpperCase()==='FFFFFF')?null:h.toUpperCase(); }
+const soloDni=s=>{ const d=String(s||'').replace(/\D/g,''); return d?String(parseInt(d,10)):''; };
+function semaforo(venc, corte, aviso){
+  if(!venc) return null;
+  if(venc<corte) return 'rojo';
+  if(venc<=sumarMeses(corte,aviso)) return 'amarillo';
+  return 'sinAlerta';
+}
+// Hash rápido del contenido, para reconocer el mismo archivo copiado en varias carpetas
+function huella(bytes){
+  let h=0x811c9dc5;
+  for(let i=0;i<bytes.length;i++){ h^=bytes[i]; h=Math.imul(h,0x01000193); }
+  return (h>>>0).toString(16)+'-'+bytes.length;
+}
+
+/* ===================== Carpetas ===================== */
+const IGNORAR=/(^|\/)(__MACOSX|\.DS_Store|desktop\.ini|Thumbs\.db)(\/|$)|(^|\/)\.[^\/]*$/i;
+// Divide cada ruta en persona (primera carpeta por debajo de la carpeta común) y archivo
+function agruparRutas(rutas){
+  const partes=rutas.map(r=>r.replace(/\\/g,'/').split('/').filter(Boolean));
+  const dirs=partes.map(p=>p.slice(0,-1));
+  let comun=0;
+  if(dirs.length){
+    const min=Math.min(...dirs.map(d=>d.length));
+    while(comun<min && dirs.every(d=>d[comun]===dirs[0][comun])) comun++;
+  }
+  // Si todos los archivos están en la misma carpeta, esa carpeta es la persona
+  const todosMismaCarpeta=dirs.every(d=>d.length===comun);
+  if(todosMismaCarpeta && comun>0) comun--;
+  return partes.map(p=>{
+    const resto=p.slice(comun);
+    if(resto.length<2) return {persona:null, archivo:p[p.length-1]};   // archivo suelto en la carpeta principal
+    return {persona:resto[0], archivo:p[p.length-1], sub:resto.slice(1,-1).join('/')};
+  });
+}
+// Nombre de la persona sin la función ("(GS)", "(Bomb, Pae)", "PAE", "BOMBERO" al final)
+function limpiarNombre(n){
+  let s=String(n).replace(/\(.*?\)/g,' ');
+  for(let i=0;i<3;i++) s=s.replace(/[\s\-_,.]+(pae|bomb|bomberos?|gs|vigilador)\s*$/i,' ').trim();
+  return s.replace(/\s+/g,' ').trim().toUpperCase();
+}
+function nombreBase(n){ return norm(limpiarNombre(n)); }
+function datosCarpeta(nombreCarpeta){ return {nombre:limpiarNombre(nombreCarpeta), funcion:[]}; }
+
+function fechaDeNombre(nombre){
+  const m=String(nombre).match(/(\d{1,2})[\-_.\/](\d{1,2})[\-_.\/](\d{4})/);
+  return m? parsearFecha(m[1]+'/'+m[2]+'/'+m[3]) : null;
+}
+
+// Carpetas que no son de una persona (se pueden volver a incluir desde la página)
+const TIPOS_PERSONALES=['cred','alta','rnr','dni','dj'];
+function tieneDocPersonal(p){ return p.archivos.some(a=>TIPOS_PERSONALES.includes(a.tipo) || (a.datos&&a.datos.dni)); }
+function enListaNoPersonas(nombre, lista){
+  const n=norm(String(nombre).replace(/\(.*\)/,''));
+  return (lista||[]).some(x=>{ const k=norm(x); return k && (n===k || n.startsWith(k+' ')); });
+}
+function esCarpetaNoPersona(nombre){
+  // Una carpeta de persona tiene al menos dos palabras (apellido y nombre)
+  if(nombreBase(nombre).split(' ').filter(w=>/[a-z]{2,}/.test(w)).length<2) return true;
+  if(/\(/.test(nombre)) return false;   // las carpetas de personas llevan la función entre paréntesis
+  return /\b(bajas?|dados? de baja|egresos?|desvinculad[oa]s?|historic[oa]s?|archivo|varios|modelos?|plantillas?|no usar)\b/.test(norm(nombre));
+}
+
+/* ===================== Lectura del listado del SASA (OCR) ===================== */
+function distancia(a,b){   // distancia de edición
+  const d=Array.from({length:a.length+1},(_,i)=>[i].concat(Array(b.length).fill(0)));
+  for(let j=1;j<=b.length;j++) d[0][j]=j;
+  for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++)
+    d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length];
+}
+// Busca en el texto leído los DNI de la nómina. Acepta un dígito mal leído sólo si coincide con un único DNI conocido.
+function buscarDnisEnTexto(texto, conocidos){
+  const t=String(texto).replace(/[Oo](?=\d)|(?<=\d)[Oo]/g,'0').replace(/(?<=\d)[lI|](?=\d)/g,'1');
+  const crudos=(t.match(/\d[\d.,]{5,11}\d/g)||[]).map(x=>x.replace(/\D/g,''));
+  // un dígito de más leído por error: se prueban también los 8 primeros y los 8 últimos
+  const leidos=new Set(crudos.flatMap(x=> x.length===9? [x, x.slice(1), x.slice(0,8)] : [x]).filter(x=>x.length>=7&&x.length<=9).map(x=>String(parseInt(x,10))));
+  const set=new Set(conocidos.filter(Boolean)), out=new Set();
+  leidos.forEach(x=>{
+    if(set.has(x)){ out.add(x); return; }
+    const cerca=[...set].filter(k=>Math.abs(k.length-x.length)<=1 && distancia(k,x)<=1);
+    if(cerca.length===1) out.add(cerca[0]);
+  });
+  return out;
+}
+function comprobanteDeTexto(texto){
+  const cuenta={};
+  (String(texto).match(/\b[A-Za-z0-9]{8,12}\b/g)||[]).filter(x=>/[A-Za-z]/.test(x)&&/\d/.test(x)).forEach(x=>{ cuenta[x]=(cuenta[x]||0)+1; });
+  const top=Object.keys(cuenta).sort((a,b)=>cuenta[b]-cuenta[a])[0];
+  return top && cuenta[top]>=2 ? top : '';
+}
+const MESES_CORTOS={ENE:1,FEB:2,MAR:3,ABR:4,MAY:5,JUN:6,JUL:7,AGO:8,SEP:9,SET:9,OCT:10,NOV:11,DIC:12};
+function selloDeTexto(texto){
+  const m=sinAcentos(String(texto)).toUpperCase().match(/\b(\d\s?\d|\d)\s*(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|SET|OCT|NOV|DIC)[A-Z]*\.?\s*(20\d\d)\b/);
+  if(!m) return null;
+  const dia=+m[1].replace(/\s/g,''); if(dia<1||dia>31) return null;
+  return new Date(+m[3],MESES_CORTOS[m[2]]-1,dia);
+}
+function esSasaPorTexto(texto){ return /RESUMEN\s+ALTA\s+DE\s+VIGILADORES|EMISION\s+DE\s+CREDENCIALES|RENOVACI[OÓ]N\s+DE\s+CREDENCIALES/i.test(sinAcentos(String(texto))); }
+
+/* ===================== Clasificación y lectura de documentos ===================== */
+function clasificarPorTexto(texto){
+  const t=sinAcentos(texto||'').toLowerCase();
+  if(!t.trim()) return null;
+  if(/resumen alta de vigiladores|emision de credenciales y renovacion/.test(t)) return 'sasa';
+  if(/dpgsp|d\.p\.g\.s\.p|nro\.? de credencial/.test(t)) return 'cred';
+  if(/simplificacion registral/.test(t) && /\balta\b/.test(t)) return 'alta';
+  if(/reincidencia|antecedentes penales/.test(t)) return 'rnr';
+  if(/anmac|legitimo\/?a? usuario/.test(t)) return 'clu';
+  if(/licencia nacional de conducir/.test(t)) return 'lic';
+  if(/declaracion jurada/.test(t)) return 'dj';
+  return null;
+}
+// Clasificación tolerante para texto leído de escaneos o fotos
+function clasificarOcr(texto){
+  const t=sinAcentos(texto||'').toLowerCase().replace(/\s+/g,' ');
+  if(!t.trim()) return null;
+  if(/resumen alta de vigiladores|emision de credenciales|renovacion de credenciales/.test(t)) return 'sasa';
+  if(/d\.?\s?p\.?\s?g\.?\s?s\.?\s?p|de credencial|credencial|seguridad privada/.test(t) && /venc|categor|vigilador/.test(t)) return 'cred';
+  if(/simplificacion registral|constancia del trabajador/.test(t)) return 'alta';
+  if(/reincidencia|antecedentes penales/.test(t)) return 'rnr';
+  if(/anmac|usuario.{0,4}de armas/.test(t)) return 'clu';
+  if(/licencia nacional de conducir|seguridad vial/.test(t)) return 'lic';
+  if(/registro nacional de las personas|documento nacional de identidad|idarg/.test(t)) return 'dni';
+  if(/declaracion jurada/.test(t)) return 'dj';
+  return null;
+}
+function clasificarPorNombre(nombre){
+  const n=' '+norm(nombre.replace(/\.[^.]+$/,''))+' ';
+  if(/ sasa | saca /.test(n)) return 'sasa';
+  if(/ rnr | reincid| antecedente/.test(n)) return 'rnr';
+  if(/ credencial| dpgsp /.test(n)) return 'cred';
+  if(/ alta | arca | afip /.test(n)) return 'alta';
+  if(/ djdd | ddjj | dj | declaracion/.test(n)) return 'dj';
+  if(/ licencia| lnc | carnet| registro de conducir/.test(n)) return 'lic';
+  if(/ clu | anmac| tenencia/.test(n)) return 'clu';
+  if(/ curso| certificado| capacitacion/.test(n)) return 'curso';
+  if(/ cv | curriculum/.test(n)) return 'cv';
+  // Nombre de la persona + número de DNI (ej. "PEREZ JUAN DNI 30111222"): suele ser la credencial
+  const palabras=n.trim().split(' ').filter(w=>/^[a-z]{2,}$/.test(w) && !/^(dni|frente|dorso|atras|foto|img|scan|copia|pdf|jpg|jpeg)$/.test(w));
+  if(/(^|\D)\d{1,2}\.?\d{3}\.?\d{3}(\D|$)/.test(nombre.replace(/\.[^.]+$/,'')) && palabras.length>=2 && !/ frente | dorso | atras /.test(n)) return 'cred';
+  if(/ dni | documento/.test(n)) return 'dni';
+  return 'otro';
+}
+function clasificar(nombre, texto){ return clasificarPorTexto(texto) || clasificarPorNombre(nombre); }
+
+const RE_FECHA=/(\d{1,2}\/\d{1,2}\/\d{4})/;
+function extraerCred(items, texto){
+  const out={};
+  const mDni=String(texto).match(/DNI\s*:?\s*(\d{1,2}\.?\d{3}\.?\d{3})/i); if(mDni) out.dni=soloDni(mDni[1]);
+  const solos=items.map(s=>String(s).trim());
+  const fechaSola=solos.find(s=>/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s));
+  if(fechaSola) out.venc=parsearFecha(fechaSola);
+  else {
+    const re=/(.{0,12})(\d{1,2}\/\d{1,2}\/\d{4})/g; let m;
+    while((m=re.exec(texto))){ if(!/hab/i.test(m[1])){ out.venc=parsearFecha(m[2]); break; } }
+  }
+  const nro=solos.find(s=>/^\d{4,8}$/.test(s)); if(nro) out.nro=nro;
+  const cat=String(texto).match(/VIGILADOR\s+(?:CON|SIN)\s+ARMA|VIGILADOR\s+[A-Z]+/); if(cat) out.categoria=cat[0].replace(/\s+/g,' ');
+  return out;
+}
+function extraerAlta(texto){
+  const out={}, t=String(texto);
+  const c=t.match(/CUIL:?\s*(\d{2})\s*-?\s*(\d{7,8})\s*-?\s*(\d)/i); if(c){ out.cuil=`${c[1]}-${c[2]}-${c[3]}`; out.dni=soloDni(c[2]); }
+  const i=t.match(/Fecha\s+Inicio:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i); if(i) out.inicio=parsearFecha(i[1]);
+  const ce=t.match(/Fecha\s+Cese:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i); if(ce) out.cese=parsearFecha(ce[1]);
+  const e=t.match(/Denominaci[oó]n:\s*([^\n]+)/i); if(e) out.empleador=e[1].trim();
+  return out;
+}
+function extraerRnr(texto){
+  const out={}, t=String(texto);
+  const d=t.match(/D\.?\s?N\.?\s?I\.?\s*:?\s*(\d{1,2}\.?\d{3}\.?\d{3})/i); if(d) out.dni=soloDni(d[1]);
+  out.emision=fechaEnLetras(t);
+  if(!out.emision){ const f=t.match(/Date:\s*(\d{4})\.(\d{2})\.(\d{2})/); if(f) out.emision=new Date(+f[1],+f[2]-1,+f[3]); }
+  const s=sinAcentos(t).toLowerCase();
+  if(/no registra antecedentes/.test(s)) out.resultado='sin';
+  else if(/registra antecedentes/.test(s)) out.resultado='con';
+  return out;
+}
+function fechasEnTexto(t){
+  const out=[], re=/(\d{1,2})\s?[\/\-.]\s?(\d{1,2})\s?[\/\-.]\s?(\d{4})/g; let m;
+  while((m=re.exec(String(t)))){ const d=parsearFecha(m[1]+'/'+m[2]+'/'+m[3]); if(d) out.push({d, i:m.index}); }
+  return out;
+}
+function extraerCredOcr(texto){
+  const t=String(texto), out={};
+  const dni=t.match(/D\.?\s?N\.?\s?I\.?\D{0,4}(\d{1,2}[.\s]?\d{3}[.\s]?\d{3})/i); if(dni) out.dni=soloDni(dni[1]);
+  const fechas=fechasEnTexto(t).filter(x=>x.d.getFullYear()>=2018);
+  const iv=t.search(/venc/i);
+  // Vencimiento: la fecha más cercana a "Vencimiento"; si no se encuentra, la más lejana en el tiempo
+  if(fechas.length) out.venc= iv>=0 ? fechas.slice().sort((a,b)=>Math.abs(a.i-iv)-Math.abs(b.i-iv))[0].d : fechas.slice().sort((a,b)=>b.d-a.d)[0].d;
+  // En la tarjeta el n.º va en la misma línea que el vencimiento: "VIGILADOR SIN ARMA 610323 10/04/2027"
+  const nro=t.match(/(?:^|\D)(\d{5,7})\s+\d{1,2}\s?[\/\-.]\s?\d{1,2}\s?[\/\-.]\s?\d{4}/) || t.match(/arma\W{0,3}(\d{5,7})(?!\d)/i) || t.match(/credencial\D{0,8}(\d{5,7})(?!\d)/i) || t.match(/(?:^|\n)\s*(\d{6})\s*(?:\n|$)/);
+  if(nro && soloDni(nro[1])!==out.dni) out.nro=nro[1];
+  return out;
+}
+function extraerDatosOcr(tipo, texto){
+  if(tipo==='cred') return extraerCredOcr(texto);
+  if(tipo==='alta'){ const r=extraerAlta(texto); if(!r.inicio){ const f=String(texto).match(/inicio\W{0,4}(\d{1,2}\s?[\/\-.]\s?\d{1,2}\s?[\/\-.]\s?\d{4})/i); if(f) r.inicio=parsearFecha(f[1].replace(/\s/g,'')); } return r; }
+  if(tipo==='dni'){ const m=String(texto).match(/IDARG\s*(\d{7,8})/i)||String(texto).match(/(?:^|\D)(\d{2}\.\d{3}\.\d{3})(?!\d)/); return m?{dni:soloDni(m[1])}:{}; }
+  if(tipo==='otro'){ const m=String(texto).match(/D\.?\s?N\.?\s?I\.?\D{0,4}(\d{1,2}[.\s]?\d{3}[.\s]?\d{3})/i); return m?{dni:soloDni(m[1])}:{}; }
+  if(tipo==='rnr'){ const r=extraerRnr(texto); if(!r.emision){ const f=fechasEnTexto(texto).filter(x=>x.d.getFullYear()>=2018).sort((a,b)=>b.d-a.d)[0]; if(f) r.emision=f.d; } return r; }
+  return {};
+}
+function extraerDatos(tipo, items, texto){
+  if(tipo==='cred') return extraerCred(items, texto);
+  if(tipo==='alta') return extraerAlta(texto);
+  if(tipo==='rnr') return extraerRnr(texto);
+  return {};
+}
+
+/* ===================== Cálculo por persona ===================== */
+// p: {carpeta, nombre, funcion, archivos:[{tipo,datos,hash,nombre}]}, o: opciones, sasaInfo: {hash:{comprobante, sello}}, ingObj y licVenc: Date|null
+// man: datos cargados a mano {dni, ingEmp, credTipo, credNro, credFecha, rnrEm}
+// xl: datos combinados de los Excel cargados {dni, nombre, ingEmp, ingObj, credNro, credTipo, credVenc, sello, rnrEm, rnrVenc, obs, conflictos}
+function calcularFila(p, o, sasaInfo, man, xl){
+  man=man||{}; xl=xl||{};
+  const de=t=>p.archivos.filter(a=>a.tipo===t);
+  const masReciente=(lista,campo)=>lista.filter(a=>a.datos&&a.datos[campo]).sort((a,b)=>b.datos[campo]-a.datos[campo])[0]||null;
+  const mismaFecha=(a,b)=>a&&b&&a.getTime()===b.getTime();
+  const obs=[], aMano=[];
+
+  // DNI: documentos, después Excel, después lo cargado a mano
+  const dnis={}; p.archivos.forEach(a=>{ if(a.datos&&a.datos.dni) dnis[a.datos.dni]=(dnis[a.datos.dni]||0)+1; });
+  const listaDni=Object.keys(dnis).sort((a,b)=>dnis[b]-dnis[a]);
+  let dni=listaDni[0]||xl.dni||'';
+  if(listaDni[0] && xl.dni && xl.dni!==listaDni[0]) obs.push(`La nómina indica otro DNI (${xl.dni}); se usa el del documento.`);
+  const edDni=!dni;
+  if(!dni && man.dni){ dni=soloDni(man.dni); aMano.push('DNI'); }
+  if(listaDni.length>1) obs.push(`Hay DNI distintos entre documentos (${listaDni.join(' / ')}).`);
+
+  // Alta
+  const altas=de('alta'), alta=masReciente(altas,'inicio');
+  let ingEmp= alta? alta.datos.inicio : (xl.ingEmp||null);
+  if(alta && xl.ingEmp && !mismaFecha(alta.datos.inicio,xl.ingEmp) && !o.etapa2) obs.push(`La nómina indica otro ingreso (alta): ${fmtFecha(xl.ingEmp)}.`);
+  const edIngEmp=!ingEmp;
+  if(!ingEmp && man.ingEmp){ ingEmp=man.ingEmp; aMano.push('ingreso a la empresa'); }
+  if(alta && alta.datos.cese) obs.push(`El alta registra fecha de cese ${fmtFecha(alta.datos.cese)}.`);
+  const ingObj=xl.ingObj||null;
+
+  // Credencial DPGSP, SASA y lo que traiga el Excel
+  const creds=de('cred'), cred=masReciente(creds,'venc')||creds[0]||null;
+  const enCarpeta=[...new Set(de('sasa').map(a=>a.hash))];
+  const porListado=dni? Object.keys(sasaInfo).filter(k=>!enCarpeta.includes(k) && sasaInfo[k].dnis && sasaInfo[k].dnis.has(dni)) : [];
+  enCarpeta.forEach(k=>{ const s=sasaInfo[k]; if(s&&s.dnis&&dni&&!s.dnis.has(dni)) obs.push(`Su DNI no se encontró en el listado del SASA "${s.nombre}": verificar.`); });
+  if(porListado.length && !o.etapa2) obs.push(`SASA tomado del listado "${porListado.map(k=>sasaInfo[k].nombre).join('", "')}" (el archivo no está en su carpeta).`);
+  const sasas=enCarpeta.concat(porListado).map(k=>{ const s=sasaInfo[k]||{}; return {nro:s.comprobante||'', sello:s.sello||null,
+    venc: s.sello? sumarMeses(s.sello,o.vigencia):null}; });
+  const sasa=sasas.filter(s=>s.venc).sort((a,b)=>b.venc-a.venc)[0] || sasas[0] || null;
+  const cands=[];
+  if(cred) cands.push({tipo:'cred', nro:cred.datos.nro||'', venc:cred.datos.venc||null});
+  if(sasa) cands.push({tipo:'sasa', nro:sasa.nro, venc:sasa.venc});
+  const xlVenc= xl.credVenc || (xl.sello? sumarMeses(xl.sello,o.vigencia):null);
+  if(xlVenc || xl.credNro){
+    const tipo= xl.credTipo || (/[a-z]/i.test(xl.credNro||'')?'sasa':'cred');
+    // Si un documento trae la misma credencial o el mismo SASA (misma fecha), se conserva el n.º de la nómina
+    const igual=cands.find(c=>c.tipo===tipo && mismaFecha(c.venc,xlVenc));
+    if(igual){ if(xl.credNro) igual.nro=xl.credNro; }
+    else if(!cands.some(c=>c.tipo===tipo && xl.credNro && c.nro===xl.credNro)) cands.push({tipo, nro:xl.credNro||'', venc:xlVenc, xl:true});
+  }
+  const edCred=!cands.some(c=>c.venc);          // nada con fecha: se puede cargar a mano
+  if(edCred && man.credFecha){
+    const tipo=man.credTipo||'cred';
+    cands.push({tipo, nro:man.credNro||'', venc: tipo==='sasa'? sumarMeses(man.credFecha,o.vigencia) : man.credFecha, man:true});
+    aMano.push(tipo==='sasa'?'SASA':'credencial');
+  }
+  cands.sort((a,b)=>(b.venc||0)-(a.venc||0));
+  const ef=cands[0]||null, otra=cands[1]||null;
+  if(ef && otra && !ef.man && !(o.etapa2 && otra.xl)){
+    const nom=t=>t==='cred'?'Credencial DPGSP':'SASA';
+    obs.push(`${nom(otra.tipo)} ${otra.nro?'n.º '+otra.nro+' ':''}${otra.venc?(otra.venc<o.corte?'vencida el ':'vence el ')+fmtFecha(otra.venc):'sin fecha'}${otra.xl?' (según la nómina)':''}.`);
+  }
+  if(ef && ef.xl && (cred||sasa)) obs.push('Se mantiene la credencial / SASA de la nómina: el documento cargado vence antes.');
+  if(sasa && !sasa.sello && !(ef&&ef.venc)) obs.push('Falta cargar la fecha del sello del SASA.');
+
+  const fIngPrueba= ingEmp || ingObj;
+  let estado;
+  if(ef){
+    if(!ef.venc) estado= ef.tipo==='sasa'?'pen':'otr';
+    else if(ef.venc>=o.corte) estado= ef.tipo==='sasa'?'sas':'vig';
+    else estado='ven';
+  } else if(fIngPrueba){
+    estado= fIngPrueba>=sumarMeses(o.corte,-o.mesesPrueba)?'sij':'snj';
+  } else estado='otr';
+  if(!ef && !o.etapa2) obs.push('No tiene credencial ni SASA.');
+  if(ef && !ef.venc && ef.nro) obs.push(`Credencial / comprobante sin fecha: ${ef.nro}.`);
+
+  // Reincidencia: la emisión más reciente entre documento y Excel
+  const rnrs=de('rnr'), rnr=masReciente(rnrs,'emision');
+  const emDoc= rnr? rnr.datos.emision : null;
+  const emXl= xl.rnrEm || (xl.rnrVenc? sumarMeses(xl.rnrVenc,-o.vigencia):null);
+  let emRnr= emDoc && emXl ? (emXl>emDoc?emXl:emDoc) : (emDoc||emXl);
+  if(emDoc && emXl && emXl>emDoc) obs.push(`Se mantiene la reincidencia de la nómina (${fmtFecha(emXl)}): el certificado cargado es anterior.`);
+  const edRnr=!emRnr;
+  if(!emRnr && man.rnrEm){ emRnr=man.rnrEm; aMano.push('reincidencia'); }
+  else if(!emRnr && !rnrs.length && !o.etapa2) obs.push('Falta el certificado de reincidencia.');
+  const vRnr= emRnr? sumarMeses(emRnr,o.vigencia):null;
+  if(rnr && rnr.datos.resultado==='con') obs.push('El certificado de reincidencia registra antecedentes: revisar.');
+
+  // Ingresos
+  let colorIng=null;
+  if(ingEmp && ingObj) colorIng= mismaFecha(ingEmp,ingObj)?'ingIgual':'ingDistinto';
+
+  // Antigüedad
+  const fAnt= o.baseAnt==='obj' ? (ingObj||ingEmp) : (ingEmp||ingObj);
+  let meses=null, tramo='sd';
+  if(fAnt){ meses=Math.max(0,mesesCompletos(fAnt,o.corte)); tramo= meses<12?'ant0': meses<24?'ant1':'ant2'; }
+
+  // Archivos que no se pudieron leer o clasificar, por nombre
+  const revisar=[];
+  p.archivos.forEach(a=>{
+    const d=a.datos||{}; let motivo='';
+    if(a.error) motivo='no se pudo abrir';
+    else if(a.tipo==='otro') motivo= a.ocrHecho?'leído, pero no se reconoció el documento': a.escaneado?'escaneado, sin clasificar':'sin clasificar';
+    else if(a.tipo==='cred' && !d.venc) motivo= a.ocrHecho?'no se pudo leer el vencimiento del escaneo':'no se leyó el vencimiento';
+    else if(a.tipo==='alta' && !d.inicio) motivo='no se leyó la fecha de inicio';
+    else if(a.tipo==='rnr' && !d.emision) motivo='no se leyó la fecha';
+    if(motivo) revisar.push(`${a.nombre} (${motivo})`);
+  });
+  if(revisar.length) obs.push(`Revisar archivos: ${revisar.join('; ')}.`);
+  if(p.soloExcel){
+    if(o.hayZip) obs.push('No se encontró su carpeta en el ZIP.');
+    const prev=String(xl.obs||'').match(/Revisar archivos:[^]*?\)\./);
+    if(prev && !revisar.length) obs.push(prev[0]);
+  }
+  if(xl.conflictos && xl.conflictos.length) obs.push(`Diferencias entre Excel: ${xl.conflictos.join('; ')}.`);
+  if(p.carpetas && p.carpetas.length>1) obs.push(`Carpetas unidas: ${p.carpetas.join(' / ')}.`);
+  const leidosOcr=p.archivos.filter(a=>a.leidoOcr && (a.datos||{}).venc||(a.leidoOcr&&((a.datos||{}).inicio||(a.datos||{}).emision))).map(a=>a.nombre);
+  if(leidosOcr.length) obs.push(`Leído de escaneo o foto (verificar): ${leidosOcr.join('; ')}.`);
+  if(aMano.length) obs.push(`Cargado a mano: ${aMano.join(', ')}.`);
+
+  return { carpeta:p.carpeta, nombre:p.nombre, soloExcel:!!p.soloExcel, dni, edDni, manDni: edDni&&!!dni,
+    ingEmp, ingObj, colorIng, edIngEmp, manIngEmp: edIngEmp&&!!ingEmp,
+    credTipo: ef?ef.tipo:null, credNro: ef?ef.nro:'', credVenc: ef?ef.venc:null, colorCred: semaforo(ef?ef.venc:null,o.corte,o.aviso),
+    edCred, manCred: !!(ef&&ef.man), estado, faltaCred: !ef,
+    rnrEmision: emRnr, rnrVenc: vRnr, colorRnr: semaforo(vRnr,o.corte,o.aviso), faltaRnr: !emRnr, edRnr, manRnr: edRnr&&!!emRnr,
+    revisar: revisar.length>0, ref:p, obs, fechaAnt:fAnt, meses, tramo, antiguedad: meses==null?'Sin dato':fmtAntiguedad(meses) };
+}
+
+/* ===================== Excel ya procesados ===================== */
+const CAMPOS_XL={'':'(ignorar)', nombre:'Apellido y nombre', dni:'DNI', ingEmp:'Ingreso (alta ARCA)', ingObj:'Ingreso al objetivo',
+  credNro:'N.º credencial / comprobante', credTipo:'Tipo (DPGSP / SASA)', credVenc:'Vencimiento credencial / SASA', sello:'Fecha del sello SASA',
+  rnrEm:'Reincidencia (emisión)', rnrVenc:'Vence reincidencia', obs:'Observaciones'};
+function campoDeEncabezado(h){
+  const t=sinAcentos(String(h??'')).toUpperCase().replace(/\s+/g,' ').trim();
+  if(!t) return '';
+  if(/OBSERV/.test(t)) return 'obs';
+  if(/APELLIDO|NOMBRE/.test(t)) return 'nombre';
+  if(/^D\.?\s?N\.?\s?I\b|DOCUMENTO|^CUIL/.test(t)) return 'dni';
+  if(/OBJETIVO/.test(t)) return 'ingObj';
+  if(/^TIPO/.test(t)) return 'credTipo';
+  if(/SELLO/.test(t)) return 'sello';
+  if(/REINCID|\bRNR\b|ANTECEDENTE/.test(t)) return /VENC|VTO/.test(t)?'rnrVenc':'rnrEm';
+  if(/VENC|VTO/.test(t) && /CRED|SASA|DPGSP/.test(t)) return 'credVenc';
+  if(/CREDENCIAL|COMPROBANTE|SASA|DPGSP/.test(t)) return 'credNro';
+  if(/INGRESO|ALTA|INICIO/.test(t)) return 'ingEmp';
+  return '';
+}
+// hojas: [{nombre, filas:[[...]]}] -> {hoja, fila (encabezado), encabezados, mapeo}
+function detectarEncabezado(hojas){
+  let mejor=null;
+  hojas.forEach((h,ih)=>{
+    for(let r=0;r<Math.min(15,h.filas.length);r++){
+      const mapeo=h.filas[r].map(campoDeEncabezado);
+      const n=mapeo.filter(Boolean).length;
+      if(!(mapeo.includes('nombre')||mapeo.includes('dni')) || n<2) continue;
+      const puntaje=n+(/n[oó]mina/i.test(h.nombre)?0.5:0);
+      if(!mejor || puntaje>mejor.puntaje) mejor={hoja:ih, fila:r, encabezados:h.filas[r].map(x=>String(x??'')), mapeo, puntaje};
+    }
+  });
+  if(!mejor) return null;
+  // Un Excel con un solo "ingreso" y sin datos de credencial ni reincidencia es la lista del objetivo
+  const m=mejor.mapeo;
+  if(!m.includes('ingObj') && m.filter(x=>x==='ingEmp').length===1 && !m.some(x=>['credNro','credVenc','rnrEm','rnrVenc','sello'].includes(x)))
+    m[m.indexOf('ingEmp')]='ingObj';
+  return mejor;
+}
+function registrosDeExcel(filas, fila, mapeo, fuente){
+  const out=[];
+  filas.slice(fila+1).forEach(f=>{
+    const r={fuente};
+    mapeo.forEach((campo,i)=>{
+      if(!campo) return;
+      const v=f[i], txt=String(v??'').trim();
+      if(!txt || /^(falta|sin cargar|sin dato)$/i.test(txt)) return;
+      if(campo==='nombre') r.nombre=txt.replace(/\s+/g,' ').toUpperCase();
+      else if(campo==='dni') r.dni=soloDni(txt.replace(/^\d{2}-(\d{7,8})-\d$/,'$1'));
+      else if(campo==='credTipo') r.credTipo= /sasa/i.test(txt)?'sasa': /dpgsp|cred/i.test(txt)?'cred':undefined;
+      else if(campo==='credNro'){
+        const fecha=parsearFecha(v);
+        if(fecha && /v(to|enc)/i.test(txt)) r.credVenc=fecha;             // formato "Vto. dd/mm/aaaa"
+        else if(fecha && /inic/i.test(txt)){ r.sello=fecha; r.credTipo='sasa'; }   // formato "inic. dd/mm/aaaa"
+        else if(/^sasa$/i.test(txt)) r.credTipo='sasa';
+        else if(!fecha) r.credNro=txt;
+      }
+      else if(campo==='obs') r.obs=txt;
+      else { const d=parsearFecha(v); if(d) r[campo]=d; }
+    });
+    if(r.nombre && norm(r.nombre).split(' ').filter(w=>/[a-z]{2,}/.test(w)).length<2) delete r.nombre;   // "38", "55", etc.
+    if(r.dni && !/^\d{6,9}$/.test(r.dni)) delete r.dni;
+    if(!r.nombre && !r.dni) return;
+    if(r.nombre && /^filtro aplicado/i.test(r.nombre)) return;
+    out.push(r);
+  });
+  return out;
+}
+function mismoNombre(a,b){
+  const ta=norm(a).split(' ').filter(x=>x.length>1), tb=norm(b).split(' ').filter(x=>x.length>1);
+  if(!ta.length||!tb.length) return false;
+  const [c,l]=ta.length<=tb.length?[ta,tb]:[tb,ta];
+  return c.length>=2 ? c.every(x=>l.includes(x)) : c[0]===l[0] && l.length===1;
+}
+// Combina los registros de varios Excel. Devuelve una lista de personas con sus datos y las diferencias encontradas.
+function unirRegistros(registros){
+  const lista=[];
+  const ETIQ={dni:'DNI', ingEmp:'ingreso (alta)', ingObj:'ingreso al objetivo'};
+  const val=v=> v instanceof Date? fmtFecha(v) : String(v);
+  registros.forEach(r=>{
+    let m= r.dni? lista.find(x=>x.dni===r.dni) : null;
+    if(!m && r.nombre) { const c=lista.filter(x=>x.nombre && mismoNombre(x.nombre,r.nombre) && (!x.dni||!r.dni)); if(c.length===1) m=c[0]; }
+    if(!m){ lista.push(Object.assign({conflictos:[], fuentes:[r.fuente]}, r)); return; }
+    if(!m.fuentes.includes(r.fuente)) m.fuentes.push(r.fuente);
+    if(!m.nombre || (r.nombre && r.nombre.length>m.nombre.length)) m.nombre=r.nombre||m.nombre;
+    ['dni','ingEmp','ingObj'].forEach(k=>{
+      if(r[k]==null) return;
+      if(m[k]==null) { m[k]=r[k]; return; }
+      if(val(m[k])!==val(r[k])) m.conflictos.push(`${ETIQ[k]} ${val(m[k])} (${m.fuente}) / ${val(r[k])} (${r.fuente})`);
+    });
+    // credencial: la que vence más tarde
+    const vm=m.credVenc||m.sello, vr=r.credVenc||r.sello;
+    if((vr && (!vm || vr>vm)) || (!vm && !m.credNro && r.credNro)){
+      if(vm && vr && vr.getTime()!==vm.getTime()) m.conflictos.push(`credencial ${m.credNro||''} ${fmtFecha(vm)} (${m.fuente}) / ${r.credNro||''} ${fmtFecha(vr)} (${r.fuente}): se tomó la más reciente`);
+      ['credNro','credTipo','credVenc','sello'].forEach(k=>{ m[k]=r[k]; });
+    }
+    // reincidencia: la más reciente
+    const rm=m.rnrEm||m.rnrVenc, rr=r.rnrEm||r.rnrVenc;
+    if(rr && (!rm || rr>rm)){ m.rnrEm=r.rnrEm; m.rnrVenc=r.rnrVenc; }
+    if(r.obs && !m.obs) m.obs=r.obs;
+  });
+  return lista;
+}
+
+// Une las carpetas de una misma persona (mismo nombre sin la función, o mismo DNI leído)
+function agruparPersonas(lista){
+  const grupos=[];
+  lista.forEach(p=>{
+    const nb=nombreBase(p.carpeta), dni=dniDeDocs(p);
+    let g=grupos.find(x=>x.nb===nb) || (dni? grupos.find(x=>x.dnis.includes(dni)) : null);
+    if(!g){ g={carpeta:p.carpeta, carpetas:[], nombre:limpiarNombre(p.carpeta), nb, dnis:[], funcion:[], archivos:[]}; grupos.push(g); }
+    g.carpetas.push(p.carpeta); g.archivos=g.archivos.concat(p.archivos);
+    if(dni && !g.dnis.includes(dni)) g.dnis.push(dni);
+  });
+  return grupos;
+}
+function dniDeDocs(p){
+  const c={}; p.archivos.forEach(a=>{ if(a.datos&&a.datos.dni) c[a.datos.dni]=(c[a.datos.dni]||0)+1; });
+  return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]||'';
+}
+/* ===================== Etapa 2: nómina + archivos nuevos ===================== */
+const PALABRAS_DOC=new Set('dni rnr alta arca afip credencial cred sasa saca djdd ddjj dj declaracion jurada licencia frente dorso atras reincidencia antecedentes certificado curso cv curriculum vitae img scan copia pdf jpg jpeg png foto renovacion renovaciones comprobante constancia ce de del la el los y nuevo nueva ficha personal domicilio actualizado'.split(' '));
+function nombreDeArchivo(nombre){
+  return norm(String(nombre).replace(/\.[^.]+$/,'')).split(' ').filter(w=>/^[a-z]{2,}$/.test(w) && !PALABRAS_DOC.has(w)).join(' ');
+}
+const toksN=s=>norm(s).split(' ').filter(w=>w.length>1);
+function marcarCambios(f,b,o){
+  const fd=d=>d?fmtFecha(d):'vacío', cambios=[], cols=new Set();
+  const bCredV= b.credVenc || (b.sello? sumarMeses(b.sello,o.vigencia):null);
+  const bRnr= b.rnrEm || (b.rnrVenc? sumarMeses(b.rnrVenc,-o.vigencia):null);
+  if(f.dni && (b.dni||'')!==f.dni){ cambios.push(`DNI: ${b.dni||'vacío'} → ${f.dni}`); cols.add(1); }
+  if(f.ingEmp && fd(b.ingEmp)!==fd(f.ingEmp)){ cambios.push(`ingreso (alta): ${fd(b.ingEmp)} → ${fd(f.ingEmp)}`); cols.add(2); }
+  if((f.credVenc||f.credNro) && ((b.credNro||'')+'|'+fd(bCredV))!==((f.credNro||'')+'|'+fd(f.credVenc))){
+    cambios.push(`credencial: ${((b.credNro||'')+' '+fd(bCredV)).trim()} → ${((f.credTipo==='sasa'?'SASA ':'')+(f.credNro||'')+' '+fd(f.credVenc)).trim()}`); cols.add(4); cols.add(5); }
+  if(f.rnrEmision && fd(bRnr)!==fd(f.rnrEmision)){ cambios.push(`reincidencia: ${fd(bRnr)} → ${fd(f.rnrEmision)}`); cols.add(6); cols.add(7); }
+  f.cambios=cols;
+  if(cambios.length){ f.actualizado=true; f.obs.unshift(`ACTUALIZADO: ${cambios.join('; ')}.`); }
+}
+function marcarFaltantes(f){
+  const falta=[];
+  if(!f.dni) falta.push('DNI'); if(!f.ingEmp) falta.push('ingreso (alta)'); if(!f.credVenc) falta.push('credencial'); if(!f.rnrEmision) falta.push('reincidencia');
+  if(falta.length){ f.sinArchivos=true; f.obs.push(`NO HAY ARCHIVOS PARA ESTE INDIVIDUO (falta: ${falta.join(', ')}).`); }
+}
+// grupos: carpetas nuevas ya agrupadas; sueltos: archivos sin carpeta. Devuelve filas, nuevos y archivos sin asignar.
+function repartirEtapa2(grupos, sueltos, regsBase, regsExcel, o, sasaInfo, manuales){
+  const B=regsBase.map(b=>({b, key:'b:'+(b.dni||nombreBase(b.nombre)), archivos:[], carpetas:[]}));
+  const N=[], sinAsignar=[];
+  const destino=a=>{
+    if(a.asignadoA){ if(a.asignadoA==='-') return '-'; const x=B.find(y=>y.key===a.asignadoA)||N.find(y=>y.key===a.asignadoA); if(x) return x; }
+    const d=a.datos&&a.datos.dni;
+    if(d){ const x=B.find(y=>y.b.dni===d)||N.find(y=>y.dni===d); if(x) return x; }
+    const t=new Set(nombreDeArchivo(a.nombre).split(' ').filter(Boolean)); if(!t.size) return null;
+    const c=B.filter(y=>{ const bt=toksN(y.b.nombre); return bt.length>=2 && (bt.every(w=>t.has(w)) || (t.size>=2 && [...t].every(w=>bt.includes(w)))); });
+    return c.length===1?c[0]:null;
+  };
+  const nuevo=(dni,nombre,nb)=>{ let n= dni? N.find(z=>z.dni===dni) : N.find(z=>z.nb===nb);
+    if(!n){ n={key:'n:'+(dni||nb), nombre, nb, dni, archivos:[], carpetas:[]}; N.push(n); } return n; };
+  grupos.forEach(g=>{
+    const d=dniDeDocs(g);
+    let x= d? B.find(y=>y.b.dni===d) : null;
+    if(!x){ const c=B.filter(y=>mismoNombre(y.b.nombre,g.nombre) && (!d||!y.b.dni)); if(c.length===1) x=c[0]; }
+    if(x){ g.archivos.forEach(a=>{ const y=a.asignadoA? destino(a) : null; if(y==='-') return; (y||x).archivos.push(a); }); x.carpetas.push(...g.carpetas); return; }
+    // carpeta que no coincide con nadie: primero se reparten sus archivos por DNI o nombre del archivo
+    const resto=[];
+    g.archivos.forEach(a=>{ if(a.tipo==='sasa'){ resto.push(a); return; } const y=destino(a); if(y==='-') return; if(y) y.archivos.push(a); else resto.push(a); });
+    if(resto.some(a=>TIPOS_PERSONALES.includes(a.tipo)||(a.datos&&a.datos.dni))){
+      const n=nuevo(dniDeDocs({archivos:resto}), g.nombre, g.nb); n.archivos.push(...resto); n.carpetas.push(...g.carpetas);
+    } else sinAsignar.push(...resto.filter(a=>a.tipo!=='sasa'));
+  });
+  sueltos.forEach(a=>{
+    if(a.tipo==='sasa') return;
+    const y=destino(a); if(y==='-') return;
+    if(y){ y.archivos.push(a); return; }
+    const d=a.datos&&a.datos.dni;
+    if(d){ const nom=nombreDeArchivo(a.nombre).toUpperCase(); nuevo(d, nom||('DNI '+d), norm(nom)).archivos.push(a); }
+    else sinAsignar.push(a);
+  });
+  const usados=new Set(), filas=[];
+  const coincide=(r,b)=> (r.dni&&b.dni)? r.dni===b.dni : !!(r.nombre&&b.nombre&&mismoNombre(r.nombre,b.nombre));
+  B.forEach(x=>{
+    const extras=regsExcel.filter((r,i)=>{ const ok=coincide(r,x.b); if(ok) usados.add(i); return ok; });
+    const xl=unirRegistros([x.b].concat(extras))[0];
+    const p={carpeta:x.key, nombre:x.b.nombre||('DNI '+x.b.dni), archivos:x.archivos, carpetas:x.carpetas};
+    const f=calcularFila(p,o,sasaInfo,manuales[x.key],xl);
+    marcarCambios(f,x.b,o); marcarFaltantes(f); filas.push(f);
+  });
+  N.forEach(n=>{
+    const p={carpeta:n.key, nombre:n.nombre, archivos:n.archivos, carpetas:n.carpetas};
+    const f=calcularFila(p,o,sasaInfo,manuales[n.key],null);
+    f.nuevo=true; f.obs.unshift('NUEVO'); f.cambios=new Set(); marcarFaltantes(f); filas.push(f);
+  });
+  const destinos=B.map(x=>({key:x.key, nombre:x.b.nombre})).concat(N.map(n=>({key:n.key, nombre:n.nombre+' (NUEVO)'})));
+  return {filas, sinAsignar, destinos, excelSinBase: regsExcel.filter((r,i)=>!usados.has(i)).length};
+}
+
+// personas: carpetas del ZIP ya agrupadas; regsExcel y regsBase: resultado de unirRegistros
+function calcularTodo(personas, o, sasaInfo, manuales, regsExcel, regsBase, sueltos){
+  manuales=manuales||{}; regsExcel=regsExcel||[]; regsBase=regsBase||[]; sueltos=sueltos||[];
+  const dniP=p=>dniDeDocs(p)||soloDni((manuales[p.carpeta]||{}).dni);
+  const coincide=(r,b)=> (r.dni&&b.dni)? r.dni===b.dni : !!(r.nombre&&b.nombre&&mismoNombre(r.nombre,b.nombre));
+  let filas=[], noAsignadas=[], excelSinBase=0, sinAsignar=[], destinos=[];
+  if(regsBase.length){
+    o=Object.assign({},o,{etapa2:true});
+    const r=repartirEtapa2(personas, sueltos, regsBase, regsExcel, o, sasaInfo, manuales);
+    filas=r.filas; sinAsignar=r.sinAsignar; destinos=r.destinos; excelSinBase=r.excelSinBase;
+  } else {
+    const asign=new Map(), libres=[];
+    regsExcel.forEach(r=>{
+      let p= r.dni? personas.find(x=>(dniP(x)===r.dni || (x.dnis||[]).includes(r.dni)) && !asign.has(x.carpeta)) : null;
+      if(!p && r.nombre){ const c=personas.filter(x=>!asign.has(x.carpeta) && mismoNombre(x.nombre,r.nombre) && (!r.dni||!dniP(x))); if(c.length===1) p=c[0]; }
+      if(p) asign.set(p.carpeta,r); else libres.push(r);
+    });
+    const extra=libres.map(r=>({carpeta:'xl:'+(r.dni||norm(r.nombre)), nombre:r.nombre||('DNI '+r.dni), funcion:[], archivos:[], soloExcel:true, xl:r}));
+    filas=personas.map(p=>calcularFila(p,o,sasaInfo,manuales[p.carpeta],asign.get(p.carpeta)))
+      .concat(extra.map(p=>calcularFila(p,o,sasaInfo,manuales[p.carpeta],p.xl)));
+  }
+  filas.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  const conteo={}; ORDEN.forEach(k=>conteo[k]=0); filas.forEach(f=>conteo[f.estado]++);
+  const conteoAnt={ant0:0,ant1:0,ant2:0,sd:0}; filas.forEach(f=>conteoAnt[f.tramo]++);
+  const res={filas, conteo, conteoAnt, total:filas.length, noAsignadas, excelSinBase, conBase:regsBase.length>0, sinAsignar, destinos,
+    nNuevos:filas.filter(f=>f.nuevo).length, nAct:filas.filter(f=>f.actualizado).length, nSin:filas.filter(f=>f.sinArchivos).length};
+  res.textoCred=redactarCred(res,o);
+  res.textoAnt=redactarAnt(res);
+  return res;
+}
+
+/* ===================== Redacción ===================== */
+function redactarCred(res,o){
+  const T=res.total, c=res.conteo, P=k=>fmtPct(pct(c[k],T));
+  const hab=c.vig+c.sas;
+  const p1=[`Al cierre del presente informe, considerando como fecha de corte el ${fmtFecha(o.corte)} correspondiente al período bajo análisis, se observa que el ${fmtPct(pct(hab,T))} % del personal de ${o.empresa} asignado al predio posee credencial habilitante vigente.`];
+  if(c.sas){
+    p1.push(`De dicho total, el ${P('sas')} % de la nómina acredita su habilitación mediante el comprobante del trámite presentado ante la Dirección Provincial para la Gestión de la Seguridad Privada (SASA), atento a que actualmente no se están emitiendo nuevas credenciales; el mismo se considera válido por el término de un año contado desde la fecha de su presentación.`);
+  }
+  const p2=[];
+  if(c.sij){
+    const un=c.sij===1;
+    p2.push(`Por su parte, el ${P('sij')} % del personal aún no ha iniciado dicho trámite; no obstante, esta situación se encuentra debidamente justificada, toda vez que ${un?'el agente involucrado se halla':'los agentes involucrados se hallan'} dentro de los primeros ${o.mesesPrueba===6?'seis':o.mesesPrueba} meses de prestación de servicios, período de prueba durante el cual aún no corresponde su gestión.`);
+  }
+  if(c.snj) p2.push(`${p2.length?'Por otro lado':'Por su parte'}, el ${P('snj')} % del personal no cuenta con credencial ni comprobante de trámite habiendo superado el período de prueba.`);
+  if(c.ven){
+    const noms=res.filas.filter(f=>f.estado==='ven').map(f=>nombrePropio(f.nombre)), un=noms.length===1;
+    p2.push(`${p2.length?'Además':'Por su parte'}, ${un?'el caso de':'los casos de'} ${listaNombres(noms)} ${un?'representa':'representan'} el ${P('ven')} % de la nómina, cuya credencial o comprobante se encuentra vencido a la fecha de corte.`);
+  }
+  if(c.pen) p2.push(`Se registra${c.pen===1?'':'n'} ${c.pen} caso${c.pen===1?'':'s'} (${P('pen')} %) con comprobante SASA cuya fecha de presentación no fue consignada.`);
+  if(c.otr) p2.push(`Se registra${c.otr===1?'':'n'} ${c.otr} caso${c.otr===1?'':'s'} (${P('otr')} %) sin clasificar por falta de documentación.`);
+  return [p1.join(' '), p2.join(' ')].filter(Boolean).join('\n\n');
+}
+function redactarAnt(res){
+  const T=res.total, c=res.conteoAnt;
+  const verbos={ant0:'registra una permanencia inferior a un año', ant1:'posee entre uno y dos años de antigüedad', ant2:'supera los dos años de permanencia en el servicio'};
+  const claves=['ant0','ant1','ant2'].filter(k=>c[k]);
+  if(!claves.length) return 'No se pudo calcular la antigüedad por falta de fechas de ingreso.';
+  const partes=claves.map((k,i)=>`el ${fmtPct(pct(c[k],T))} %${i===0?' de los GS':''}${i===claves.length-1&&claves.length>1?' restante':''} ${verbos[k]}`);
+  let t=`En tal sentido, ${unirFrases(partes)}.`;
+  if(c.sd) t+=` No se pudo calcular la antigüedad de ${c.sd} GS por falta de fecha de ingreso.`;
+  return t;
+}
+
+/* ===================== ART y seguro de vida (igual que GS credenciales) ===================== */
+function agruparLineas(items){
+  const filas=[];
+  items.filter(i=>i.str&&i.str.trim()).forEach(i=>{
+    const y=i.transform[5], x=i.transform[4];
+    let f=filas.find(f=>Math.abs(f.y-y)<3);
+    if(!f){ f={y,items:[]}; filas.push(f); }
+    f.items.push({x,s:i.str});
+  });
+  filas.sort((a,b)=>b.y-a.y);
+  return filas.map(f=>f.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join(' ').replace(/\s+/g,' ').trim());
+}
+function extraerLista(lineas){
+  lineas=lineas.map(s=>String(s).trim()).filter(Boolean);
+  const re=/(?:^|\D)(2[0-7])\s*-?\s*(\d{7,8})\s*-?\s*(\d)(?!\d)\s*(.*)$/;
+  const lista=[], vistos=new Set();
+  for(let i=0;i<lineas.length;i++){
+    const m=lineas[i].match(re); if(!m) continue;
+    let nombre=m[4].replace(/^[\s\-–|]+/,'').trim();
+    if(!/[a-záéíóúñ]{2}/i.test(nombre)){ const sig=(lineas[i+1]||'').trim(); if(/[a-záéíóúñ]{2}/i.test(sig) && !re.test(sig)) nombre=sig; }
+    const cuil=`${m[1]}-${m[2].padStart(8,'0')}-${m[3]}`, dni=String(parseInt(m[2],10));
+    if(vistos.has(cuil)) continue; vistos.add(cuil);
+    lista.push({cuil,dni,nombre:nombre.toUpperCase()});
+  }
+  return lista;
+}
+function detectarTipoCob(lineas){
+  const t=sinAcentos(lineas.join(' ').toLowerCase());
+  if(/seguro (colectivo )?de vida|vida obligatorio/.test(t)) return 'sv';
+  if(/riesgos del trabajo|\bart\b|aseguradora de riesgos/.test(t)) return 'art';
+  return 'otro';
+}
+const TIPOS_COB={art:'ART', sv:'Seguro de vida', otro:'Otro'};
+function cruzarCobertura(filasNomina, docs){
+  const dnis=tipo=>{ const ds=docs.filter(d=>d.tipo===tipo); if(!ds.length) return null;
+    const s=new Set(); ds.forEach(d=>d.lista.forEach(x=>s.add(x.dni))); return s; };
+  const sArt=dnis('art'), sSv=dnis('sv');
+  const filas=filasNomina.map(f=>{ const d=soloDni(f.dni);
+    return {nombre:f.nombre, dni:f.dni, art: sArt?sArt.has(d):null, sv: sSv?sSv.has(d):null}; });
+  const dnisNom=new Set(filasNomina.map(f=>soloDni(f.dni)));
+  const ajenos=tipo=>{ const out=[], v=new Set(); docs.filter(d=>d.tipo===tipo).forEach(d=>d.lista.forEach(x=>{ if(!dnisNom.has(x.dni)&&!v.has(x.dni)){ v.add(x.dni); out.push(x.nombre); } })); return out; };
+  return { filas, total:filas.length, hayArt:!!sArt, haySv:!!sSv,
+    cArt: filas.filter(f=>f.art).length, cSv: filas.filter(f=>f.sv).length,
+    ajenosArt: ajenos('art'), ajenosSv: ajenos('sv') };
+}
+function redactarCob(cob, o){
+  const T=cob.total, P=n=>fmtPct(pct(n,T)), par=[];
+  const faltantes=(campo,txtDoc)=>{
+    const f=cob.filas.filter(x=>x[campo]===false).map(x=>nombrePropio(x.nombre));
+    if(!f.length) return ' La totalidad del personal se encuentra comprendida.';
+    const un=f.length===1;
+    return ` ${un?'No figura':'No figuran'} en ${txtDoc} ${listaNombres(f)}, lo que representa el ${P(f.length)} % de la nómina.`;
+  };
+  if(cob.hayArt) par.push(`En lo que respecta a la cobertura de riesgos del trabajo, el ${P(cob.cArt)} % del personal de ${o.empresa} asignado al predio se encuentra incluido en el certificado de cobertura de la ART presentado.`+faltantes('art','dicho certificado'));
+  if(cob.haySv) par.push(`En cuanto al seguro colectivo de vida obligatorio, el ${P(cob.cSv)} % del personal cuenta con cobertura conforme a la constancia presentada.`+faltantes('sv','dicha constancia'));
+  return par.join('\n\n');
+}
+
+if(typeof module!=='undefined') module.exports={parsearFecha,fechaEnLetras,fmtFecha,sumarMeses,agruparRutas,datosCarpeta,fechaDeNombre,
+  clasificar,clasificarPorNombre,clasificarPorTexto,extraerCred,extraerAlta,extraerRnr,extraerDatos,calcularFila,calcularTodo,
+  redactarCred,redactarAnt,huella,agruparLineas,ORDEN,ESTADOS,campoDeEncabezado,detectarEncabezado,registrosDeExcel,unirRegistros,mismoNombre,
+  esCarpetaNoPersona,enListaNoPersonas,limpiarNombre,nombreBase,agruparPersonas,repartirEtapa2,nombreDeArchivo,clasificarOcr,extraerCredOcr,extraerDatosOcr,tieneDocPersonal,buscarDnisEnTexto,comprobanteDeTexto,selloDeTexto,esSasaPorTexto};
+
+/* ===================== Interfaz ===================== */
+if(typeof document!=='undefined'){
+  const $=id=>document.getElementById(id);
+  const SECCIONES=['secSasa','secNomina','secDocs','secCred','secAnt','secCob','secDescargas'];
+  const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fondo=clave=>{ const h=hexDe(clave); return h?`background:#${h}`:''; };
+
+  let personas=[];          // [{carpeta,nombre,funcion,archivos:[...]}]
+  let sueltos=[];           // archivos nuevos que no vinieron dentro de una carpeta
+  let sigArch=1;
+  let excluidas=new Set();  // carpetas que no se cuentan como personal (ej. BAJAS)
+  let escaneos={};          // hash -> bytes de PDF escaneados (para vista previa y lectura del SASA)
+  let ocrEnCurso=0;
+  const activas=()=>agruparPersonas(personas.filter(p=>!excluidas.has(p.carpeta)));
+  const todosLosArchivos=()=>personas.flatMap(p=>p.archivos).concat(sueltos);
+  let sasaInfo={};          // hash -> {comprobante, sello, nombre, buf, personas}
+  let excels=[];            // [{id, nombre, hojas, hoja, fila, encabezados, mapeo}]
+  let sigExcel=1;
+  const incluidasMan=new Set(), excluidasMan=new Set();
+  let manuales={};          // carpeta -> datos cargados a mano donde faltaba el documento o no se pudo leer
+  const colsOcultas=new Set();
+  let ultimo=null, opts=null;
+
+  window.addEventListener('beforeunload',e=>{ if(personas.length||sueltos.length||excels.length){ e.preventDefault(); e.returnValue=''; } });
+
+  const hoy=new Date(), def=new Date(hoy.getFullYear(),hoy.getMonth(),0);
+  $('corte').value=isoFecha(def);
+  $('noPersonas').value=NO_PERSONAS_DEF;
+  const listaNoPersonas=()=>$('noPersonas').value.split(/[;\n]/).map(x=>x.trim()).filter(Boolean);
+  function calcularExcluidas(){
+    excluidas=new Set(personas.filter(p=>excluidasMan.has(p.carpeta) || (!incluidasMan.has(p.carpeta) && (esCarpetaNoPersona(p.carpeta)||enListaNoPersonas(p.carpeta,listaNoPersonas())||!tieneDocPersonal(p)))).map(p=>p.carpeta));
+  }
+  $('noPersonas').addEventListener('change',()=>{ if(!personas.length) return; calcularExcluidas(); armarSasa(); recalcular(); });
+
+  /* ---------- Opciones ---------- */
+  function leerOpciones(){
+    const [a,m,d]=($('corte').value||isoFecha(def)).split('-').map(Number);
+    return { corte:new Date(a,m-1,d), empresa:$('empresa').value.trim()||'la empresa',
+      vigencia:parseInt($('vigencia').value)||12, aviso:parseInt($('aviso').value)||1,
+      mesesPrueba:parseInt($('mesesPrueba').value)||6, baseAnt:$('baseAnt').value, hayZip:personas.length>0 };
+  }
+  ['corte','empresa','vigencia','aviso','mesesPrueba','baseAnt'].forEach(id=>$(id).addEventListener('change',()=>{ if(personas.length||excels.length) recalcular(); }));
+
+  /* ---------- Colores ---------- */
+  const selectores=[...document.querySelectorAll('input[data-color]')];
+  const sincronizarSelectores=()=>selectores.forEach(i=>{ i.value='#'+COLORES[i.dataset.color].toLowerCase(); });
+  sincronizarSelectores();
+  selectores.forEach(i=>i.addEventListener('input',()=>{ COLORES[i.dataset.color]=i.value.slice(1).toUpperCase(); if(ultimo) pintarTablas(); }));
+  document.querySelectorAll('button[data-reset]').forEach(b=>b.onclick=()=>{
+    b.dataset.reset.split(',').forEach(k=>COLORES[k]=COLORES_DEF[k]); sincronizarSelectores(); if(ultimo) pintarTablas();
+  });
+
+  /* ---------- Lectura de PDF ---------- */
+  function pdfLib(){
+    if(!window.pdfjsLib) throw new Error('no se cargó la librería para leer PDF (revisá la conexión a internet).');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    return pdfjsLib;
+  }
+  async function textoDePdf(bytes, maxPag=2){
+    const pdf=await pdfLib().getDocument({data:bytes.slice()}).promise;
+    let items=[], lineas=[];
+    for(let p=1;p<=Math.min(pdf.numPages,maxPag);p++){
+      const tc=await (await pdf.getPage(p)).getTextContent();
+      items=items.concat(tc.items.map(i=>i.str).filter(s=>s&&s.trim()));
+      lineas=lineas.concat(agruparLineas(tc.items));
+    }
+    pdf.destroy();
+    return {items, texto:lineas.join('\n')};
+  }
+
+  /* ---------- Carga de la carpeta o el ZIP ---------- */
+  // entradas: [{ruta, leer: async()=>Uint8Array}]
+  async function procesarEntradas(entradas){
+    const msg=$('msg'); msg.className='msg';
+    entradas=entradas.filter(e=>!IGNORAR.test(e.ruta));
+    if(!entradas.length){ msg.className='msg err'; msg.textContent='No se encontraron archivos.'; return; }
+    const ubic=agruparRutas(entradas.map(e=>e.ruta));
+    const mapa=new Map(personas.map(p=>[p.carpeta,p])); const excelsSueltos=[], nuevos=[];
+    const cache={};   // hash -> {items,texto}
+    for(let i=0;i<entradas.length;i++){
+      const e=entradas[i], u=ubic[i], ext=(u.archivo.split('.').pop()||'').toLowerCase();
+      msg.textContent=`Leyendo ${i+1} de ${entradas.length}: ${u.archivo}`;
+      if(!u.persona && ['xlsx','xls','csv'].includes(ext)){ excelsSueltos.push({e,u,ext}); continue; }
+      if(u.persona && !mapa.has(u.persona)){ const dc=datosCarpeta(u.persona); mapa.set(u.persona,{carpeta:u.persona, nombre:dc.nombre, funcion:dc.funcion, archivos:[]}); }
+      const arch={id:sigArch++, nombre:u.archivo, sub:u.sub||'', ext, items:[], texto:'', hash:null, tipo:'otro', auto:true, datos:{}, leer:e.leer};
+      if(ext==='pdf'){
+        try{
+          const bytes=await e.leer();
+          arch.hash=huella(bytes);
+          if(!cache[arch.hash]){ cache[arch.hash]=await textoDePdf(bytes); if(!cache[arch.hash].texto.trim()) escaneos[arch.hash]=bytes; }
+          arch.items=cache[arch.hash].items; arch.texto=cache[arch.hash].texto; arch.escaneado=!arch.texto.trim();
+        }catch(err){ arch.error=String(err&&err.message||err); }
+      }
+      arch.tipo=clasificar(arch.nombre, arch.texto);
+      if(u.persona) mapa.get(u.persona).archivos.push(arch); else { arch.suelto=true; sueltos.push(arch); }
+      nuevos.push(arch);
+    }
+    personas=[...mapa.values()];
+    calcularExcluidas();
+    // Un PDF escaneado repetido en varias carpetas y sin clasificar es, casi seguro, el SASA
+    const cuenta={}; todosLosArchivos().forEach(a=>{ if(a.hash) cuenta[a.hash]=(cuenta[a.hash]||0)+1; });
+    nuevos.forEach(a=>{ if(a.tipo==='otro'&&a.escaneado&&cuenta[a.hash]>1) a.tipo='sasa'; });
+    nuevos.forEach(a=>{ a.datos=extraerDatos(a.tipo,a.items,a.texto); });
+    armarSasa();
+    // Empresa sugerida a partir de las altas
+    if(!$('empresa').value.trim()){
+      const emp={}; personas.forEach(p=>p.archivos.forEach(a=>{ if(a.tipo==='alta'&&a.datos.empleador) emp[a.datos.empleador]=(emp[a.datos.empleador]||0)+1; }));
+      const top=Object.keys(emp).sort((a,b)=>emp[b]-emp[a])[0]; if(top) $('empresa').value=top;
+    }
+    recalcular();
+    const errores=nuevos.filter(a=>a.error).map(a=>a.nombre);
+    msg.textContent=`Se leyeron ${nuevos.length} archivo${nuevos.length===1?'':'s'} nuevo${nuevos.length===1?'':'s'} (en total: ${todosLosArchivos().length}).`+(errores.length?` No se pudieron abrir: ${errores.join(', ')}.`:'');
+    // Excel sueltos (por ejemplo, el del objetivo)
+    for(const xl of excelsSueltos){
+      try{ agregarExcel(await xl.e.leer(), xl.u.archivo); }catch(err){ $('msgExcel').className='msg err'; $('msgExcel').textContent='No se pudo leer '+xl.u.archivo+'.'; }
+    }
+    await leerConOcr();
+  }
+
+  /* ---------- Lectura automática (OCR) de los escaneos ---------- */
+  async function renderizar(bytes, escala){
+    const pdf=await pdfLib().getDocument({data:bytes.slice()}).promise;
+    const pg=await pdf.getPage(1); const vp=pg.getViewport({scale:escala});
+    const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+    await pg.render({canvasContext:cv.getContext('2d'), viewport:vp}).promise; pdf.destroy();
+    return cv;
+  }
+  async function canvasDeImagen(bytes, ext){
+    const blob=new Blob([bytes],{type: ext==='png'?'image/png':'image/jpeg'});
+    const bmp=await createImageBitmap(blob);
+    const f=Math.min(1.5, 2400/Math.max(bmp.width,bmp.height));
+    const cv=document.createElement('canvas'); cv.width=Math.round(bmp.width*f); cv.height=Math.round(bmp.height*f);
+    cv.getContext('2d').drawImage(bmp,0,0,cv.width,cv.height); bmp.close&&bmp.close();
+    return cv;
+  }
+  const IMAGENES=['jpg','jpeg','png'];
+  // Archivos que conviene leer con OCR: de quienes les falta credencial, reincidencia o alta
+  function archivosFaltantes(){
+    if(!ultimo) return [];
+    const leible=a=>!a.ocrHecho && !a.error && a.leer && (a.escaneado || IMAGENES.includes(a.ext));
+    const lista=[], vistos=new Set();
+    const sumar=a=>{ const k=a.hash||a.id; if(vistos.has(k)) return; vistos.add(k); lista.push(a); };
+    ultimo.filas.forEach(f=>{
+      const arch=(f.ref&&f.ref.archivos)||[];
+      const sinVenc=!f.credVenc;
+      // toda credencial a la que no se le leyó el vencimiento
+      arch.filter(a=>leible(a) && a.tipo==='cred' && !(a.datos&&a.datos.venc)).forEach(sumar);
+      if(sinVenc) arch.filter(a=>leible(a) && a.tipo==='dni' && /\d{7}/.test(a.nombre.replace(/\./g,''))).forEach(sumar);
+      if(f.faltaRnr) arch.filter(a=>leible(a) && a.tipo==='rnr').forEach(sumar);
+      if(!f.ingEmp) arch.filter(a=>leible(a) && a.tipo==='alta').forEach(sumar);
+      if(sinVenc || f.faltaRnr || !f.ingEmp) arch.filter(a=>leible(a) && a.tipo==='otro').forEach(sumar);
+    });
+    (ultimo.sinAsignar||[]).filter(a=>leible(a) && ['otro','dni','cred','alta','rnr'].includes(a.tipo)).forEach(sumar);
+    return lista;
+  }
+  $('btnDetener').onclick=()=>{ ocrEnCurso++; $('btnDetener').classList.add('hidden'); $('msg').textContent=$('msg').textContent.replace(/ (Leyendo|Revisando|Preparando).*$/,'')+' Lectura de escaneos detenida.'; };
+  async function leerConOcr(){
+    // 1) escaneos sin clasificar (puede ser un SASA con otro nombre), 2) listados de SASA y 3) documentos faltantes
+    const sinClasif=[...new Set(todosLosArchivos().filter(a=>a.tipo==='otro'&&a.escaneado&&escaneos[a.hash]).map(a=>a.hash))];
+    if(!sinClasif.length && !Object.keys(sasaInfo).some(k=>sasaInfo[k].bytes && !sasaInfo[k].ocr) && !archivosFaltantes().length) return;
+    if(!window.Tesseract){ Object.values(sasaInfo).forEach(s=>{ if(!s.ocr) s.ocr={error:'no se cargó la librería de lectura (revisá la conexión a internet)'}; }); pintarSasa(); return; }
+    const msg=$('msg'), base=msg.textContent, yo=++ocrEnCurso;
+    let worker=null;
+    $('btnDetener').classList.remove('hidden');
+    try{
+      msg.textContent=base+' Preparando la lectura de escaneos…';
+      worker=await Tesseract.createWorker('eng',1,{
+        workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+        corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+        langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int'});
+      let n=0;
+      for(const h of sinClasif){
+        if(yo!==ocrEnCurso) return;
+        msg.textContent=`${base} Revisando escaneos sin clasificar (${++n} de ${sinClasif.length})…`;
+        const {data}=await worker.recognize(await renderizar(escaneos[h],2));
+        if(esSasaPorTexto(data.text)){
+          todosLosArchivos().forEach(a=>{ if(a.hash===h&&a.tipo==='otro'){ a.tipo='sasa'; a.datos={}; } });
+          armarSasa(); sasaTextoPrevio[h]=data.text;
+        }
+      }
+      const pend=Object.keys(sasaInfo).filter(k=>sasaInfo[k].bytes && !sasaInfo[k].ocr);
+      n=0;
+      for(const k of pend){
+        if(yo!==ocrEnCurso) return;
+        msg.textContent=`${base} Leyendo el listado del SASA (${++n} de ${pend.length})…`;
+        sasaInfo[k].ocr={leyendo:true}; pintarSasa();
+        const texto=sasaTextoPrevio[k] || (await worker.recognize(await renderizar(sasaInfo[k].bytes,3))).data.text;
+        aplicarOcr(k,texto);
+      }
+      // 3) documentos faltantes: escaneos y fotos de credenciales, altas y reincidencias
+      recalcular();
+      const falt=archivosFaltantes();
+      n=0;
+      for(const a of falt){
+        if(yo!==ocrEnCurso) return;
+        msg.textContent=`${base} Leyendo escaneos y fotos de documentos faltantes (${++n} de ${falt.length}): ${a.nombre}…`;
+        try{
+          const bytes=await a.leer();
+          const cv= a.ext==='pdf'? await renderizar(bytes,2.5) : await canvasDeImagen(bytes,a.ext);
+          const texto=(await worker.recognize(cv)).data.text;
+          // el mismo archivo copiado en otras carpetas recibe el mismo resultado
+          todosLosArchivos().forEach(b=>{ if(b===a || (a.hash&&b.hash===a.hash)){
+            b.ocrHecho=true; b.textoOcr=texto;
+            const t=clasificarOcr(texto);
+            if(t && (b.tipo==='otro' || (b.auto && b.tipo!==t && ['dni','cred'].includes(b.tipo)))) b.tipo=t;
+            const d=extraerDatosOcr(b.tipo,texto);
+            const conocidos=ultimo? ultimo.filas.map(f=>f.dni).filter(Boolean) : [];
+            if(['dni','otro','cred','rnr','alta'].includes(b.tipo) && (!d.dni || !conocidos.includes(d.dni))){ const k=[...buscarDnisEnTexto(texto, conocidos)]; if(k.length===1) d.dni=k[0]; }
+            if(Object.keys(d).length){ b.datos=Object.assign({}, b.datos, d); b.leidoOcr=true; }
+          }});
+        }catch(err){ a.ocrHecho=true; a.errorOcr=String(err&&err.message||err); }
+        if(n%5===0) recalcular();
+      }
+      msg.textContent=base+(falt.length?` Se leyeron ${falt.length} escaneo${falt.length===1?'':'s'} o foto${falt.length===1?'':'s'} de documentos faltantes.`:'');
+    }catch(err){
+      console.error(err);
+      Object.values(sasaInfo).forEach(s=>{ if(!s.ocr||s.ocr.leyendo) s.ocr={error:String(err&&err.message||err)}; });
+      msg.textContent=base+' No se pudieron leer los escaneos automáticamente; cargá los datos del SASA a mano.';
+    }finally{
+      if(worker) await worker.terminate();
+      if(yo===ocrEnCurso) $('btnDetener').classList.add('hidden');
+      // libera los escaneos que no son SASA
+      Object.keys(escaneos).forEach(h=>{ if(!sasaInfo[h]) delete escaneos[h]; });
+      recalcular(); pintarSasa();
+    }
+  }
+  const sasaTextoPrevio={};
+  function aplicarOcr(k,texto){
+    const s=sasaInfo[k], conocidos=[...new Set(activas().map(p=>dniDePersona(p)).concat(ultimo?ultimo.filas.map(f=>f.dni):[]))].filter(Boolean);
+    s.dnis=buscarDnisEnTexto(texto, conocidos);
+    const comp=comprobanteDeTexto(texto), sello=selloDeTexto(texto);
+    s.ocr={ok:true, comprobante:comp, sello};
+    if(!s.comprobante && comp){ s.comprobante=comp; s.compLeido=true; }
+    if(sello && !s.selloManual){ s.sello=sello; s.selloLeido=true; }
+  }
+  // DNI de una persona según sus documentos con texto (credencial, alta, reincidencia)
+  function dniDePersona(p){
+    const c={}; p.archivos.forEach(a=>{ if(a.datos&&a.datos.dni) c[a.datos.dni]=(c[a.datos.dni]||0)+1; });
+    return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]||'';
+  }
+
+  function armarSasa(){
+    const viejo=sasaInfo; sasaInfo={};
+    personas.concat([{nombre:'archivos sueltos', archivos:sueltos}]).forEach(p=>p.archivos.forEach(a=>{
+      if(a.tipo!=='sasa') return;
+      const k=a.hash||('sin-'+a.id); a.hash=k;
+      if(!sasaInfo[k]){
+        const prev=viejo[k]||{};
+        sasaInfo[k]=Object.assign({nombre:a.nombre, comprobante:'', sello:fechaDeNombre(a.nombre), bytes:escaneos[k]||null}, prev, {personas:[]});
+      }
+      sasaInfo[k].personas.push(p.nombre);
+    }));
+    pintarSasa();
+  }
+
+  function textoOcr(s){
+    if(!s.ocr) return s.bytes? 'Pendiente de lectura automática del listado.' : '';
+    if(s.ocr.leyendo) return 'Leyendo el listado…';
+    if(s.ocr.error) return 'No se pudo leer el listado automáticamente: '+esc(s.ocr.error)+'.';
+    const nom=(ultimo?ultimo.filas:[]).filter(f=>f.dni&&s.dnis.has(f.dni)).map(f=>f.nombre);
+    const fuera=nom.filter(n=>!s.personas.includes(n));
+    return `Listado leído: figuran ${nom.length} persona${nom.length===1?'':'s'} de la nómina.`
+      +(fuera.length?` Se asigna también a quienes no tienen el archivo en su carpeta: ${esc(fuera.join(', '))}.`:'');
+  }
+  function pintarSasa(){
+    const claves=Object.keys(sasaInfo);
+    $('listaSasa').innerHTML= claves.length? claves.map(k=>{ const s=sasaInfo[k];
+      return `<div class="doc-bloque"><div class="sasa" id="sasa-${k}">
+        <div>${s.bytes?`<canvas data-sasa="${k}" title="Clic para agrandar"></canvas>`:'<div class="hint">Vista previa no disponible.</div>'}</div>
+        <div><b>${esc(s.nombre)}</b>
+          <div class="hint">En ${s.personas.length} carpeta${s.personas.length===1?'':'s'}: ${esc(s.personas.join(', '))}.</div>
+          <div class="hint">${textoOcr(s)}</div>
+          <label style="margin-top:10px">N.º de comprobante</label><input type="text" data-comp="${k}" value="${esc(s.comprobante)}" size="18">${s.compLeido?'<div class="hint">Leído del escaneo; verificalo.</div>':''}
+          <label style="margin-top:10px">Fecha del sello (presentación)</label><input type="date" data-sello="${k}" value="${isoFecha(s.sello)}">
+          <div class="hint">Vence ${s.sello?fmtFecha(sumarMeses(s.sello,leerOpciones().vigencia)):'—'}${s.selloManual?'':s.selloLeido?' (fecha leída del sello; verificala)':s.sello&&fechaDeNombre(s.nombre)?' (fecha tomada del nombre del archivo; verificala con el sello)':''}.</div>
+        </div></div></div>`; }).join('')
+      : '<div class="hint">No se encontraron comprobantes SASA.</div>';
+    $('listaSasa').querySelectorAll('input[data-comp]').forEach(i=>i.onchange=()=>{ sasaInfo[i.dataset.comp].comprobante=i.value.trim(); sasaInfo[i.dataset.comp].compLeido=false; recalcular(); });
+    $('listaSasa').querySelectorAll('input[data-sello]').forEach(i=>i.onchange=()=>{ const s=sasaInfo[i.dataset.sello]; s.sello=parsearFecha(i.value); s.selloManual=true; s.selloLeido=false; recalcular(); pintarSasa(); });
+    $('listaSasa').querySelectorAll('canvas[data-sasa]').forEach(async cv=>{
+      const k=cv.dataset.sasa;
+      cv.onclick=()=>{ cv.classList.toggle('grande'); $('sasa-'+k).classList.toggle('grande'); };
+      try{
+        const pdf=await pdfLib().getDocument({data:sasaInfo[k].bytes.slice()}).promise;
+        const pg=await pdf.getPage(1); const vp=pg.getViewport({scale:2});
+        cv.width=vp.width; cv.height=vp.height;
+        await pg.render({canvasContext:cv.getContext('2d'), viewport:vp}).promise;
+      }catch(err){ cv.replaceWith(Object.assign(document.createElement('div'),{className:'hint',textContent:'No se pudo mostrar la vista previa.'})); }
+    });
+  }
+
+  // ZIP
+  async function cargarZip(file){
+    if(!window.JSZip) throw new Error('no se cargó la librería para abrir ZIP (revisá la conexión a internet).');
+    $('msg').className='msg'; $('msg').textContent='Abriendo el ZIP…';
+    const zip=await JSZip.loadAsync(file);
+    const entradas=[];
+    zip.forEach((ruta,ent)=>{ if(!ent.dir) entradas.push({ruta, leer:()=>ent.async('uint8array')}); });
+    // Un ZIP dentro de otro (OneDrive a veces descarga así)
+    if(entradas.length===1 && /\.zip$/i.test(entradas[0].ruta)) return cargarZip(await entradas[0].leer());
+    await procesarEntradas(entradas);
+  }
+  const conError=fn=>async(...a)=>{ try{ await fn(...a); }catch(err){ $('msg').className='msg err'; $('msg').textContent='No se pudo leer: '+(err&&err.message||err); console.error(err); } };
+
+  $('btnZip').onclick=()=>$('inZip').click();
+  $('btnArchivos').onclick=()=>$('inArchivos').click();
+  $('inArchivos').onchange=conError(async ev=>{
+    const fs=[...ev.target.files]; ev.target.value='';
+    const zips=fs.filter(f=>/\.zip$/i.test(f.name)), otros=fs.filter(f=>!/\.zip$/i.test(f.name));
+    for(const z of zips) await cargarZip(z);
+    if(otros.length) await procesarEntradas(otros.map(f=>({ruta:f.name, leer:async()=>new Uint8Array(await f.arrayBuffer())})));
+  });
+  $('btnQuitarNuevos').onclick=()=>{ ocrEnCurso++; personas=[]; sueltos=[]; sasaInfo={}; escaneos={}; excluidas=new Set(); $('msg').textContent='Se quitaron los archivos nuevos.'; pintarSasa(); recalcular(); };
+  $('btnCarpeta').onclick=()=>$('inCarpeta').click();
+  $('inZip').onchange=conError(async ev=>{ const f=ev.target.files[0]; ev.target.value=''; if(f) await cargarZip(f); });
+  $('inCarpeta').onchange=conError(async ev=>{
+    const fs=[...ev.target.files]; ev.target.value='';
+    await procesarEntradas(fs.map(f=>({ruta:f.webkitRelativePath||f.name, leer:async()=>new Uint8Array(await f.arrayBuffer())})));
+  });
+
+  // Arrastrar y soltar (carpeta o ZIP)
+  const zona=$('zona');
+  ['dragenter','dragover'].forEach(t=>zona.addEventListener(t,e=>{ e.preventDefault(); zona.classList.add('sobre'); }));
+  ['dragleave','drop'].forEach(t=>zona.addEventListener(t,()=>zona.classList.remove('sobre')));
+  zona.addEventListener('drop',conError(async e=>{
+    e.preventDefault();
+    const items=[...(e.dataTransfer.items||[])].map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean);
+    if(items.length===1 && items[0].isFile && /\.zip$/i.test(items[0].name)){ return cargarZip(e.dataTransfer.files[0]); }
+    const entradas=[];
+    const leerDir=dir=>new Promise((ok,mal)=>{ const r=dir.createReader(), todo=[];
+      const sig=()=>r.readEntries(lote=>{ if(!lote.length) ok(todo); else { todo.push(...lote); sig(); } },mal); sig(); });
+    const recorrer=async ent=>{
+      if(ent.isFile){ const file=await new Promise((ok,mal)=>ent.file(ok,mal));
+        entradas.push({ruta:ent.fullPath.replace(/^\//,''), leer:async()=>new Uint8Array(await file.arrayBuffer())}); }
+      else if(ent.isDirectory){ for(const h of await leerDir(ent)) await recorrer(h); }
+    };
+    for(const it of items) await recorrer(it);
+    await procesarEntradas(entradas);
+  }));
+
+  /* ---------- Excel ya procesados ---------- */
+  function agregarExcel(bytes, nombre, esBase){
+    if(typeof XLSX==='undefined') throw new Error('no se cargó la librería de Excel (revisá la conexión a internet).');
+    const wb=XLSX.read(bytes,{type:'array',cellDates:true});
+    const hojas=wb.SheetNames.map(n=>({nombre:n, filas:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})}));
+    const enc=detectarEncabezado(hojas);
+    const m=$(esBase?'msgBase':'msgExcel');
+    if(!enc){ m.className='msg err'; m.textContent=`${nombre}: no se encontró una fila de encabezados con apellido y nombre o DNI.`; return; }
+    if(esBase) excels=excels.filter(x=>!x.esBase);
+    excels.push(Object.assign({id:sigExcel++, nombre, hojas, esBase:!!esBase}, enc));
+    m.className='msg'; m.textContent='';
+    recalcular();
+  }
+  function registrosExcels(){
+    return unirRegistros(excels.filter(x=>!x.esBase).flatMap(x=>registrosDeExcel(x.hojas[x.hoja].filas, x.fila, x.mapeo, x.nombre)));
+  }
+  function registrosBase(){
+    const b=excels.find(x=>x.esBase);
+    return b? unirRegistros(registrosDeExcel(b.hojas[b.hoja].filas, b.fila, b.mapeo, b.nombre)) : [];
+  }
+  function pintarExcels(){
+    const asignados=ultimo? ultimo.filas.length : 0;
+    const bloque=x=>{
+      const regs=registrosDeExcel(x.hojas[x.hoja].filas, x.fila, x.mapeo, x.nombre);
+      const opcHoja=x.hojas.map((h,i)=>`<option value="${i}"${i===x.hoja?' selected':''}>${esc(h.nombre)}</option>`).join('');
+      const cols=x.encabezados.map((h,i)=>!String(h).trim()?'':`<label style="display:inline-flex;gap:4px;align-items:center;margin:2px 10px 2px 0">${esc(h)} →
+          <select data-xlmap="${x.id}" data-col="${i}">${Object.keys(CAMPOS_XL).map(k=>`<option value="${k}"${x.mapeo[i]===k?' selected':''}>${CAMPOS_XL[k]}</option>`).join('')}</select></label>`).join('');
+      return `<div class="doc-bloque"><div class="doc-cab"><b>${esc(x.nombre)}</b>
+          <span class="tipo"><label style="margin:0">Hoja</label><select data-xlhoja="${x.id}">${opcHoja}</select>
+          <button class="sec mini" data-xlquitar="${x.id}">Quitar</button></span></div>
+        <div class="hint" style="margin:0 0 6px">${regs.length} persona${regs.length===1?'':'s'} leída${regs.length===1?'':'s'}${x.esBase?' (nómina base)':''}. Revisá a qué dato corresponde cada columna:</div>
+        <div style="font-size:12px">${cols}</div></div>`; };
+    $('listaBase').innerHTML=excels.filter(x=>x.esBase).map(bloque).join('');
+    $('listaExcel').innerHTML=excels.filter(x=>!x.esBase).map(bloque).join('');
+    const extra=[];
+    if(ultimo && ultimo.conBase) extra.push(`Nómina base: ${ultimo.total} persona${ultimo.total===1?'':'s'}.`);
+    if(ultimo && ultimo.excelSinBase) extra.push(`${ultimo.excelSinBase} persona${ultimo.excelSinBase===1?'':'s'} de los otros Excel no está${ultimo.excelSinBase===1?'':'n'} en la nómina base y no se muestra${ultimo.excelSinBase===1?'':'n'}.`);
+    if(excels.some(x=>x.esBase)){ $('msgBase').className='msg'; $('msgBase').textContent=extra.join(' '); }
+    document.querySelectorAll('select[data-xlmap]').forEach(sel=>sel.onchange=()=>{ const x=excels.find(e=>e.id===+sel.dataset.xlmap); x.mapeo[+sel.dataset.col]=sel.value; recalcular(); });
+    document.querySelectorAll('select[data-xlhoja]').forEach(sel=>sel.onchange=()=>{
+      const x=excels.find(e=>e.id===+sel.dataset.xlhoja), enc=detectarEncabezado([x.hojas[+sel.value]]);
+      x.hoja=+sel.value; if(enc){ x.fila=enc.fila; x.encabezados=enc.encabezados; x.mapeo=enc.mapeo; } recalcular(); });
+    document.querySelectorAll('button[data-xlquitar]').forEach(b=>b.onclick=()=>{ excels=excels.filter(e=>e.id!==+b.dataset.xlquitar); recalcular(); });
+  }
+  $('inBase').onchange=async ev=>{
+    const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+    try{ agregarExcel(new Uint8Array(await f.arrayBuffer()), f.name, true); }catch(err){ $('msgBase').className='msg err'; $('msgBase').textContent=`${f.name}: no se pudo leer (${err.message||err}).`; }
+  };
+  $('inExcel').onchange=async ev=>{
+    const fs=[...ev.target.files]; ev.target.value='';
+    for(const f of fs){ try{ agregarExcel(new Uint8Array(await f.arrayBuffer()), f.name); }catch(err){ $('msgExcel').className='msg err'; $('msgExcel').textContent=`${f.name}: no se pudo leer (${err.message||err}).`; } }
+  };
+
+  /* ---------- Recalcular y pintar ---------- */
+  // Recalcula después de que el foco pasó al campo siguiente y lo devuelve a ese campo
+  function recalcularConFoco(){
+    setTimeout(()=>{
+      const a=document.activeElement, sel=a&&a.closest&&a.closest('#tablaNomina') ? ['data-man','data-carp'].filter(k=>a.hasAttribute(k)).map(k=>`[${k}="${CSS.escape(a.getAttribute(k))}"]`).join('') : '';
+      recalcular();
+      if(sel){ const n=document.querySelector('#tablaNomina '+sel); if(n){ n.focus(); } }
+    },0);
+  }
+  function pintarExcluidas(){
+    const ex=personas.filter(p=>excluidas.has(p.carpeta));
+    $('excluidas').innerHTML= ex.length? 'No se cuentan como personal (sin documentación personal o en la lista de carpetas que no son personal): '+ex.map(p=>`<b>${esc(p.carpeta)}</b> (${p.archivos.length} archivo${p.archivos.length===1?'':'s'}) <button class="sec mini" data-incluir="${esc(p.carpeta)}">Incluir como persona</button>`).join(' · ') : '';
+    $('excluidas').querySelectorAll('button[data-incluir]').forEach(b=>b.onclick=()=>{ excluidasMan.delete(b.dataset.incluir); incluidasMan.add(b.dataset.incluir); calcularExcluidas(); armarSasa(); recalcular(); leerConOcr(); });
+  }
+  function recalcular(){
+    opts=leerOpciones();
+    ultimo=calcularTodo(activas(), opts, sasaInfo, manuales, registrosExcels(), registrosBase(), sueltos);
+    pintarExcluidas(); pintarExcels();
+    SECCIONES.forEach(s=>$(s).classList.toggle('hidden',!ultimo.total));
+    ['secSasa','secDocs'].forEach(s=>$(s).classList.toggle('hidden',!(personas.length||sueltos.length)));
+    $('resumenNov').textContent= ultimo.conBase? `Nómina: ${ultimo.total} persona${ultimo.total===1?'':'s'} · ${ultimo.nNuevos} NUEVO${ultimo.nNuevos===1?'':'S'} · ${ultimo.nAct} ACTUALIZADO${ultimo.nAct===1?'':'S'} · ${ultimo.nSin} con datos sin archivos` : '';
+    pintarTablas(); pintarPersonas();
+    $('kpisCred').innerHTML=ORDEN.filter(k=>ultimo.conteo[k]).map(k=>
+      `<div class="kpi"><div class="n">${fmtPct(pct(ultimo.conteo[k],ultimo.total))} %</div><div class="t">${ESTADOS[k]} · ${ultimo.conteo[k]} de ${ultimo.total}</div></div>`).join('');
+    $('textoCred').value=ultimo.textoCred;
+    $('textoAnt').value=ultimo.textoAnt;
+    actualizarCobertura(true);
+  }
+
+  function celdaFalta(){ return '<td class="no">Falta</td>'; }
+  const pasaNom=(f,v)=>{
+    const colores=[f.colorCred,f.colorRnr];
+    switch(v){
+      case '': return true;
+      case 'rojo': return colores.includes('rojo');
+      case 'amarillo': return colores.includes('amarillo');
+      case 'credRojo': return f.colorCred==='rojo';
+      case 'rnrRojo': return f.colorRnr==='rojo';
+      case 'dpgsp': return f.credTipo==='cred';
+      case 'sasa': return f.credTipo==='sasa';
+      case 'ingIgual': return f.colorIng==='ingIgual';
+      case 'ingDistinto': return f.colorIng==='ingDistinto';
+      case 'falta': return f.faltaCred||f.faltaRnr;
+      case 'obs': return f.obs.length>0;
+      case 'revisar': return f.revisar;
+      case 'soloExcel': return f.soloExcel;
+      case 'nuevo': return !!f.nuevo;
+      case 'actualizado': return !!f.actualizado;
+      case 'sinArchivos': return !!f.sinArchivos;
+    }
+    return true;
+  };
+  const filasNomVista=()=>ultimo.filas.filter(f=>pasaNom(f,$('fNom').value));
+  const filasNomInforme=()=>document.querySelector('input[name=alcanceNom]:checked').value==='filtrada'?filasNomVista():ultimo.filas;
+  const filasAntVista=()=>ultimo.filas.filter(f=>!$('fAnt').value||f.tramo===$('fAnt').value);
+  const filasAntInforme=()=>document.querySelector('input[name=alcanceAnt]:checked').value==='filtrada'?filasAntVista():ultimo.filas;
+  const textoSel=id=>{ const s=$(id); return s.value? s.options[s.selectedIndex].text : ''; };
+  ['fNom','fAnt'].forEach(id=>$(id).addEventListener('change',()=>{ if(ultimo) pintarTablas(); }));
+  // Ocultar columnas de la nómina (sólo en pantalla; las descargas salen completas)
+  const NOMBRES_COL=['Apellido y nombre','DNI','Ingreso (alta ARCA)','Ingreso al objetivo','N.º credencial / comprobante','Vencimiento credencial / SASA','Reincidencia (emisión)','Vence reincidencia','Observaciones'];
+  function aplicarColumnas(){
+    $('estiloCols').textContent=[...colsOcultas].map(i=>`#tablaNomina .c${i}{display:none}`).join('\n');
+    $('panelCols').querySelectorAll('button[data-col]').forEach(b=>b.classList.toggle('off',colsOcultas.has(+b.dataset.col)));
+  }
+  $('panelCols').insertAdjacentHTML('beforeend', NOMBRES_COL.map((c,i)=>i===0?'':`<button type="button" class="chip" data-col="${i}">${c}</button>`).join(' ')
+    +' <button type="button" class="sec mini" id="colsTodas">Mostrar todas</button>');
+  $('panelCols').querySelectorAll('button[data-col]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.col; if(colsOcultas.has(i)) colsOcultas.delete(i); else colsOcultas.add(i); aplicarColumnas(); });
+  $('colsTodas').onclick=()=>{ colsOcultas.clear(); aplicarColumnas(); };
+  function pintarTablas(){
+    let h='<tr>'+COLS_NOM.map((c,i)=>`<th class="c${i}">${c}${i?`<span class="x" data-ocultar="${i}" title="Ocultar esta columna">×</span>`:''}</th>`).join('')+'</tr>';
+    const vista=filasNomVista();
+    vista.forEach(f=>{
+      const c=esc(f.carpeta), m=manuales[f.carpeta]||{};
+      const cls=(i,extra)=>`class="c${i}${extra?' '+extra:''}${f.cambios&&f.cambios.has(i)?' cambio':''}"`;
+      const credCls= f.credTipo? (f.credTipo==='sasa'?'credSasa':'credDpgsp') : null;
+      h+=`<tr><td ${cls(0,'nom')}>${esc(f.nombre)}</td>`
+        +(f.edDni?`<td ${cls(1,'edit'+(f.dni?'':' falta'))}><input type="text" size="9" data-man="dni" data-carp="${c}" value="${esc(m.dni||'')}" placeholder="${ultimo.conBase?'No hay archivos':'Falta'}"></td>`:`<td ${cls(1)}>${esc(f.dni)}</td>`)
+        +(f.edIngEmp?`<td ${cls(2,'edit'+(f.ingEmp?'':' falta'))} style="${fondo(f.colorIng)}"><input type="date" data-man="ingEmp" data-carp="${c}" value="${isoFecha(m.ingEmp)}"></td>`
+                    :`<td ${cls(2)} style="${fondo(f.colorIng)}">${fmtFecha(f.ingEmp)}</td>`)
+        +`<td ${cls(3)} style="${fondo(f.colorIng)}">${fmtFecha(f.ingObj)}</td>`
+        +(f.edCred
+          ? `<td ${cls(4,'edit'+(f.manCred?'':' falta'))} style="${fondo(credCls)}"><select data-man="credTipo" data-carp="${c}"><option value="cred"${(m.credTipo||'cred')==='cred'?' selected':''}>DPGSP</option><option value="sasa"${m.credTipo==='sasa'?' selected':''}>SASA</option></select>
+               <input type="text" size="9" data-man="credNro" data-carp="${c}" value="${esc(m.credNro||'')}" placeholder="N.º"></td>
+             <td ${cls(5,'edit'+(f.manCred?'':' falta'))} style="${fondo(f.colorCred)}"><input type="date" data-man="credFecha" data-carp="${c}" value="${isoFecha(m.credFecha)}" title="${m.credTipo==='sasa'?'Fecha del sello del SASA':'Vencimiento de la credencial'}">
+               <div class="mini">${m.credTipo==='sasa'?(f.manCred?'sello · vence '+fmtFecha(f.credVenc):'fecha del sello'):'vencimiento'}</div></td>`
+          : `<td ${cls(4)} style="${fondo(credCls)}">${esc(f.credNro)||(f.credTipo==='sasa'?'SASA':'')}</td><td ${cls(5)} style="${fondo(f.colorCred)}">${fmtFecha(f.credVenc)}</td>`)
+        +(f.edRnr
+          ? `<td ${cls(6,'edit'+(f.manRnr?'':' falta'))}><input type="date" data-man="rnrEm" data-carp="${c}" value="${isoFecha(m.rnrEm)}" title="Fecha de emisión del certificado"></td><td ${cls(7)} style="${fondo(f.colorRnr)}">${fmtFecha(f.rnrVenc)}</td>`
+          : `<td ${cls(6)}>${fmtFecha(f.rnrEmision)}</td><td ${cls(7)} style="${fondo(f.colorRnr)}">${fmtFecha(f.rnrVenc)}</td>`)
+        +`<td ${cls(8,'obs')}>${esc(f.obs.join(' ')).replace(/^(NUEVO|ACTUALIZADO:)/,'<b class="nov">$1</b>').replace('NO HAY ARCHIVOS PARA ESTE INDIVIDUO','<b class="nov">NO HAY ARCHIVOS PARA ESTE INDIVIDUO</b>')}</td></tr>`;
+    });
+    if(!vista.length) h+=`<tr><td colspan="${COLS_NOM.length}">Nadie cumple con el filtro elegido.</td></tr>`;
+    $('tablaNomina').innerHTML=h;
+    $('cuentaNom').textContent= vista.length===ultimo.total? `Mostrando los ${ultimo.total} GS.` : `Mostrando ${vista.length} de ${ultimo.total} GS (${textoSel('fNom')}).`;
+    $('tablaNomina').querySelectorAll('[data-ocultar]').forEach(x=>x.onclick=()=>{ colsOcultas.add(+x.dataset.ocultar); aplicarColumnas(); });
+    $('tablaNomina').querySelectorAll('[data-man]').forEach(i=>i.onchange=()=>{
+      const m=manuales[i.dataset.carp]=manuales[i.dataset.carp]||{}, campo=i.dataset.man;
+      if(i.type==='date'){ const d=parsearFecha(i.value); if(d) m[campo]=d; else delete m[campo]; }
+      else if(i.value.trim()) m[campo]=i.value.trim(); else delete m[campo];
+      recalcularConFoco(); });
+    const nObs=ultimo.filas.filter(f=>f.obs.length).length;
+    $('avisosNomina').textContent= nObs? `${nObs} persona${nObs===1?'':'s'} con observaciones (ver la última columna).`:'';
+
+    let ha='<tr><th>APELLIDO Y NOMBRE</th><th>DNI</th><th>INGRESO</th><th>FECHA ACTUAL</th><th>ANTIGÜEDAD</th></tr>';
+    const vistaA=filasAntVista();
+    vistaA.forEach(f=>{
+      ha+=`<tr style="${fondo(f.tramo==='sd'?null:f.tramo)}"><td class="nom">${esc(f.nombre)}</td><td>${esc(f.dni)}</td><td>${fmtFecha(f.fechaAnt)}</td><td>${fmtFecha(opts.corte)}</td><td>${f.antiguedad}</td></tr>`;
+    });
+    if(!vistaA.length) ha+='<tr><td colspan="5">Nadie cumple con el filtro elegido.</td></tr>';
+    $('tablaAnt').innerHTML=ha;
+    $('cuentaAnt').textContent= vistaA.length===ultimo.total? `Mostrando los ${ultimo.total} GS.` : `Mostrando ${vistaA.length} de ${ultimo.total} GS (${textoSel('fAnt')}).`;
+  }
+
+  function pintarPersonas(){
+    const act=ultimo? ultimo.filas.filter(f=>f.ref&&f.ref.archivos&&f.ref.archivos.length).map(f=>f.ref) : [], tot=act.reduce((s,p)=>s+p.archivos.length,0), sc=act.reduce((s,p)=>s+p.archivos.filter(a=>a.tipo==='otro').length,0);
+    $('resumenDocs').textContent=`${tot} archivos en ${act.length} carpetas.`+(sc?` ${sc} sin clasificar.`:'');
+    const opc=t=>Object.keys(TIPOS).map(k=>`<option value="${k}"${k===t?' selected':''}>${TIPOS[k]}</option>`).join('');
+    const enTabla=ultimo? ultimo.filas.filter(f=>f.ref&&f.ref.archivos&&f.ref.archivos.length).map(f=>Object.assign({},f.ref,{nombre:f.nombre})) : [];
+    const sinAs=(ultimo&&ultimo.sinAsignar)||[];
+    const opcDest=a=>'<option value="">(sin asignar)</option><option value="-"'+(a.asignadoA==='-'?' selected':'')+'>(ignorar este archivo)</option>'+(ultimo.destinos||[]).map(d=>`<option value="${esc(d.key)}"${a.asignadoA===d.key?' selected':''}>${esc(d.nombre)}</option>`).join('');
+    const bloqueSinAs= sinAs.length? `<details class="persona" open><summary><b>Archivos que no se pudieron asignar a nadie (${sinAs.length})</b></summary>
+        <div class="tabla-wrap"><table><tr><th>ARCHIVO</th><th>TIPO</th><th>DATOS LEÍDOS</th><th>ASIGNAR A</th></tr>`
+        +sinAs.map(a=>`<tr><td class="nom">${esc((a.sub?a.sub+'/':'')+a.nombre)}</td><td><select data-arch="${a.id}">${opc(a.tipo)}</select></td><td class="obs">${esc(resumenDatos(a))}</td><td><select data-asignar="${a.id}">${opcDest(a)}</select></td></tr>`).join('')
+        +'</table></div></details>' : '';
+    $('listaPersonas').innerHTML=bloqueSinAs+enTabla.map(p=>{
+      const sc=p.archivos.filter(a=>a.tipo==='otro').length;
+      return `<details class="persona"><summary>${esc((p.carpetas||[p.carpeta]).join(' + '))} — ${p.archivos.length} archivo${p.archivos.length===1?'':'s'}${sc?` (${sc} sin clasificar)`:''}</summary>
+        <div style="margin:4px 0 6px"><button class="sec mini" data-excluir="${esc((p.carpetas||[p.carpeta]).join('|'))}">No es una persona: excluir de la nómina</button></div>
+        <div class="tabla-wrap"><table><tr><th>ARCHIVO</th><th>TIPO</th><th>DATOS LEÍDOS</th></tr>`
+        +[...p.archivos].sort((x,y)=>x.nombre.localeCompare(y.nombre,'es')).map(a=>`<tr><td class="nom">${esc((a.sub?a.sub+'/':'')+a.nombre)}</td><td><select data-arch="${a.id}">${opc(a.tipo)}</select>${a.auto?'':' <span class="hint">(a mano)</span>'}</td><td class="obs">${esc(resumenDatos(a))}</td></tr>`).join('')
+        +'</table></div></details>';
+    }).join('');
+    $('listaPersonas').querySelectorAll('select[data-asignar]').forEach(sel=>sel.onchange=()=>{
+      const a=todosLosArchivos().find(x=>x.id===+sel.dataset.asignar); if(a){ a.asignadoA=sel.value||undefined; recalcular(); } });
+    $('listaPersonas').querySelectorAll('button[data-excluir]').forEach(b=>b.onclick=()=>{ b.dataset.excluir.split('|').forEach(c=>{ incluidasMan.delete(c); excluidasMan.add(c); }); calcularExcluidas(); armarSasa(); recalcular(); });
+    $('listaPersonas').querySelectorAll('select[data-arch]').forEach(s=>s.onchange=()=>{
+      const id=+s.dataset.arch;
+      todosLosArchivos().forEach(a=>{ if(a.id===id){ a.tipo=s.value; a.auto=false; a.datos=Object.assign(extraerDatos(a.tipo,a.items,a.texto), a.textoOcr?extraerDatosOcr(a.tipo,a.textoOcr):{}); } });
+      const abiertos=[...$('listaPersonas').querySelectorAll('details[open] summary')].map(x=>x.textContent);
+      armarSasa(); recalcular(); if(s.value==='sasa') leerConOcr();
+      $('listaPersonas').querySelectorAll('details').forEach(d=>{ if(abiertos.includes(d.querySelector('summary').textContent.replace(/ \(\d+ sin clasificar\)/,''))||abiertos.some(t=>t.startsWith(d.querySelector('summary').textContent.split(' — ')[0]+' —'))) d.open=true; });
+    });
+  }
+  function resumenDatos(a){
+    if(a.error) return 'No se pudo abrir: '+a.error;
+    const d=a.datos||{}, p=[];
+    if(a.tipo==='cred'){ if(d.dni) p.push('DNI '+d.dni); if(d.nro) p.push('N.º '+d.nro); p.push(d.venc?'vence '+fmtFecha(d.venc):'vencimiento no leído'); if(d.categoria) p.push(nombrePropio(d.categoria)); }
+    else if(a.tipo==='alta'){ if(d.cuil) p.push('CUIL '+d.cuil); p.push(d.inicio?'inicio '+fmtFecha(d.inicio):'inicio no leído'); if(d.cese) p.push('cese '+fmtFecha(d.cese)); }
+    else if(a.tipo==='rnr'){ if(d.dni) p.push('DNI '+d.dni); p.push(d.emision?'emitido '+fmtFecha(d.emision):'fecha no leída'); if(d.resultado==='sin') p.push('sin antecedentes'); if(d.resultado==='con') p.push('REGISTRA ANTECEDENTES'); }
+    else if(a.tipo==='sasa'){ const s=sasaInfo[a.hash]; p.push(s&&s.sello?'sello '+fmtFecha(s.sello):'sello sin cargar'); if(s&&s.comprobante) p.push('comprobante '+s.comprobante); }
+    else if(a.escaneado) p.push('PDF escaneado (sin texto)');
+    if(a.leidoOcr) p.push('leído del escaneo o la foto: verificar');
+    else if(a.ocrHecho && ['cred','alta','rnr','otro'].includes(a.tipo)) p.push('se intentó leer el escaneo o la foto sin resultado');
+    return p.join(' · ');
+  }
+
+  /* ---------- Cobertura ART / seguro de vida ---------- */
+  const docs=[]; let sigDoc=1, cob=null;
+  async function lineasDeArchivo(file){
+    const ext=file.name.toLowerCase().split('.').pop();
+    if(ext==='doc') throw new Error('los archivos .doc (Word viejo) no se pueden leer; guardalo como .docx.');
+    if(ext!=='pdf' && ext!=='docx') throw new Error('debe ser .pdf o .docx.');
+    const buf=await file.arrayBuffer();
+    if(ext==='pdf'){
+      const pdf=await pdfLib().getDocument({data:new Uint8Array(buf)}).promise; let lineas=[];
+      for(let p=1;p<=pdf.numPages;p++){ lineas=lineas.concat(agruparLineas((await (await pdf.getPage(p)).getTextContent()).items)); }
+      return lineas;
+    }
+    if(!window.mammoth) throw new Error('no se cargó la librería para leer Word (revisá la conexión a internet).');
+    return (await mammoth.extractRawText({arrayBuffer:buf})).value.split('\n');
+  }
+  $('archivoDoc').addEventListener('change', async ev=>{
+    const archivos=[...ev.target.files], m=$('msgDoc'); ev.target.value='';
+    if(!archivos.length) return;
+    m.className='msg'; m.textContent=`Leyendo ${archivos.length} archivo${archivos.length===1?'':'s'}…`;
+    const errores=[];
+    for(const file of archivos){
+      try{ const l=await lineasDeArchivo(file);
+        if(!l.some(x=>x.trim())) throw new Error('no tiene texto; puede ser un PDF escaneado.');
+        docs.push({id:sigDoc++, nombre:file.name, tipo:detectarTipoCob(l), lista:extraerLista(l)}); }
+      catch(e){ errores.push(`${file.name}: ${e&&e.message?e.message:e}`); }
+    }
+    pintarDocsCob();
+    if(errores.length){ m.className='msg err'; m.innerHTML='No se pudo leer:<br>'+errores.map(esc).join('<br>'); } else m.textContent='';
+  });
+  function pintarDocsCob(){
+    $('listaDocs').innerHTML=docs.map(dd=>{
+      const opc=Object.keys(TIPOS_COB).map(k=>`<option value="${k}"${dd.tipo===k?' selected':''}>${TIPOS_COB[k]}</option>`).join('');
+      return `<div class="doc-bloque"><div class="doc-cab"><b>${esc(dd.nombre)}</b>
+        <span class="tipo"><label style="margin:0">Tipo</label><select data-tipocob="${dd.id}">${opc}</select>
+        <button class="sec mini" data-quitar="${dd.id}">Quitar</button></span></div>
+        <div class="hint" style="margin:0">${dd.lista.length} persona${dd.lista.length===1?'':'s'} en el listado.</div></div>`; }).join('');
+    $('listaDocs').querySelectorAll('button[data-quitar]').forEach(b=>b.onclick=()=>{ const i=docs.findIndex(d=>d.id===+b.dataset.quitar); if(i>=0) docs.splice(i,1); pintarDocsCob(); });
+    $('listaDocs').querySelectorAll('select[data-tipocob]').forEach(s=>s.onchange=()=>{ const d=docs.find(x=>x.id===+s.dataset.tipocob); if(d){ d.tipo=s.value; actualizarCobertura(true); } });
+    actualizarCobertura(true);
+  }
+  const siNo=v=> v===null?'—':(v?'Sí':'No');
+  const pasaFiltro=(f,campo,val)=> !val || (val==='si'?f[campo]===true:f[campo]===false);
+  function filasCobFiltradas(){ const a=$('fArt').value, v=$('fSv').value; return cob.filas.filter(f=>pasaFiltro(f,'art',a)&&pasaFiltro(f,'sv',v)); }
+  const alcanceCob=()=>document.querySelector('input[name=alcanceCob]:checked').value;
+  const filasCobInforme=()=> alcanceCob()==='filtrada'?filasCobFiltradas():cob.filas;
+  function descFiltro(){ const a=$('fArt'), v=$('fSv'), p=[];
+    if(a.value) p.push(a.options[a.selectedIndex].text); if(v.value) p.push(v.options[v.selectedIndex].text); return p.join(' y '); }
+  function pintarTablaCob(){
+    const filas=filasCobFiltradas();
+    let h='<tr><th>APELLIDO Y NOMBRE</th><th>DNI</th><th>ART</th><th>SEGURO DE VIDA</th></tr>';
+    filas.forEach(f=>{ h+=`<tr><td class="nom">${esc(f.nombre)}</td><td>${esc(f.dni)}</td><td class="${f.art===false?'no':''}">${siNo(f.art)}</td><td class="${f.sv===false?'no':''}">${siNo(f.sv)}</td></tr>`; });
+    if(!filas.length) h+='<tr><td colspan="4">Ningún GS cumple con el filtro elegido.</td></tr>';
+    $('tablaCob').innerHTML=h;
+    $('cuentaCob').textContent= filas.length===cob.total ? `Mostrando los ${cob.total} GS.` : `Mostrando ${filas.length} de ${cob.total} GS (${descFiltro()}).`;
+  }
+  function actualizarCobertura(reescribir){
+    if(!ultimo){ cob=null; return; }
+    cob=cruzarCobertura(ultimo.filas, docs);
+    const kpi=(titulo,hay,n)=> hay
+      ? `<div class="kpi"><div class="n">${fmtPct(pct(n,cob.total))} %</div><div class="t">${titulo} · ${n} de ${cob.total}</div></div>`
+      : `<div class="kpi"><div class="n">—</div><div class="t">${titulo} · falta cargar el documento</div></div>`;
+    $('kpisCob').innerHTML=kpi('Con ART',cob.hayArt,cob.cArt)+kpi('Con seguro de vida',cob.haySv,cob.cSv);
+    const av=[];
+    if(cob.ajenosArt.length) av.push(`En la ART figuran personas que no están en las carpetas: ${cob.ajenosArt.map(esc).join(', ')}.`);
+    if(cob.ajenosSv.length) av.push(`En el seguro de vida figuran personas que no están en las carpetas: ${cob.ajenosSv.map(esc).join(', ')}.`);
+    const sinDni=ultimo.filas.filter(f=>!f.dni).map(f=>esc(f.nombre));
+    if(sinDni.length && (cob.hayArt||cob.haySv)) av.push(`Sin DNI leído (no se pueden cruzar): ${sinDni.join(', ')}.`);
+    $('avisoCob').innerHTML=av.join('<br>'); $('avisoCob').className=av.length?'msg err':'msg';
+    pintarTablaCob();
+    if(reescribir) $('textoCob').value=redactarCob(cob, opts);
+  }
+  ['fArt','fSv'].forEach(id=>$(id).addEventListener('change',()=>{ if(cob) pintarTablaCob(); }));
+
+  /* ---------- Descargas ---------- */
+  const nombreArchivo=ext=>`GS_carpetas_${fmtFecha(opts.corte).replace(/\//g,'-')}.${ext}`;
+  const parrafos=id=>$(id).value.split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean);
+  const resumenCred=()=>ORDEN.filter(k=>ultimo.conteo[k]).map(k=>[ESTADOS[k], ultimo.conteo[k], fmtPct(pct(ultimo.conteo[k],ultimo.total))+' %']).concat([['Total',ultimo.total,'100 %']]);
+  const resumenAnt=()=>TRAMOS.filter(t=>ultimo.conteoAnt[t.key]).map(t=>[t.nombre, ultimo.conteoAnt[t.key], fmtPct(pct(ultimo.conteoAnt[t.key],ultimo.total))+' %']).concat([['Total',ultimo.total,'100 %']]);
+  const resumenCob=()=>{ const r=[], T=cob.total;
+    if(cob.hayArt) r.push(['Con ART',cob.cArt,fmtPct(pct(cob.cArt,T))+' %'],['Sin ART',T-cob.cArt,fmtPct(pct(T-cob.cArt,T))+' %']);
+    if(cob.haySv) r.push(['Con seguro de vida',cob.cSv,fmtPct(pct(cob.cSv,T))+' %'],['Sin seguro de vida',T-cob.cSv,fmtPct(pct(T-cob.cSv,T))+' %']);
+    return r.concat([['Total de GS en la nómina',T,'']]); };
+  // Fila de la nómina para Excel/PDF y la clave de color de cada celda
+  const filaNom=f=>[f.nombre,f.dni, fmtFecha(f.ingEmp), fmtFecha(f.ingObj),
+    f.faltaCred?'Falta':(f.credNro||(f.credTipo==='sasa'?'SASA':'')), f.faltaCred?'Falta':fmtFecha(f.credVenc),
+    f.faltaRnr?'Falta':fmtFecha(f.rnrEmision), f.faltaRnr?'Falta':fmtFecha(f.rnrVenc), f.obs.join(' ')];
+  const claveNom=(f,c)=> c===2||c===3 ? f.colorIng
+    : c===4&&!f.faltaCred ? (f.credTipo==='sasa'?'credSasa':'credDpgsp')
+    : c===5&&!f.faltaCred ? f.colorCred : c===7&&!f.faltaRnr ? f.colorRnr : null;
+  const esFalta=(f,c)=> ((c===4||c===5)&&f.faltaCred)||((c===6||c===7)&&f.faltaRnr);
+  const esCambio=(f,c)=> !!(f.cambios&&f.cambios.has(c));
+  // En el Excel se agrega la columna TIPO (después del n.º) para poder volver a cargarlo
+  const COLS_XLS=COLS_NOM.slice(0,5).concat(['TIPO (DPGSP / SASA)'],COLS_NOM.slice(5));
+  const filaXls=f=>{ const r=filaNom(f); r.splice(5,0,f.credTipo==='sasa'?'SASA':f.credTipo==='cred'?'DPGSP':''); return r; };
+  const colXls=c=> c<5?c : c===5?-1 : c-1;
+  const filaAnt=f=>[f.nombre,f.dni,fmtFecha(f.fechaAnt),fmtFecha(opts.corte),f.antiguedad];
+  const claveTramo=f=>f.tramo==='sd'?null:f.tramo;
+
+  function descargar(datos, nombre, tipo){
+    const blob= datos instanceof Blob ? datos : new Blob([datos],{type:tipo});
+    if(window.navigator && window.navigator.msSaveOrOpenBlob){ window.navigator.msSaveOrOpenBlob(blob,nombre); return; }
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=nombre; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },4000);
+  }
+  function avisarError(que,e){ const m=$('msgDesc'); m.className='msg err'; m.textContent=`No se pudo generar el ${que}: ${e&&e.message?e.message:e}`; console.error(e); }
+
+  $('btnXlsx').onclick=()=>{
+    if(!ultimo) return; $('msgDesc').textContent='';
+    try{
+      if(typeof XLSX==='undefined') throw new Error('no se cargó la librería de Excel (revisá la conexión a internet).');
+      const borde={top:{style:'thin',color:{rgb:'999999'}},bottom:{style:'thin',color:{rgb:'999999'}},left:{style:'thin',color:{rgb:'999999'}},right:{style:'thin',color:{rgb:'999999'}}};
+      const sHead={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:borde};
+      const sCelda=(clave,izq,falta)=>{ const h=hexDe(clave); return {alignment:{horizontal:izq?'left':'center',vertical:'top',wrapText:izq},border:borde,
+        ...(falta==='cambio'?{font:{bold:true,color:{rgb:'2F6FDB'}}}:falta?{font:{bold:true,color:{rgb:'B00020'}}}:{}), ...(h?{fill:{patternType:'solid',fgColor:{rgb:h}}}:{})}; };
+      const hoja=(cab,filas,claveCelda,anchos,izqCols=[0],faltaCelda=()=>false)=>{
+        const ws=XLSX.utils.aoa_to_sheet([cab].concat(filas));
+        cab.forEach((_,c)=>{ ws[XLSX.utils.encode_cell({r:0,c})].s=sHead; });
+        filas.forEach((f,r)=>f.forEach((_,c)=>{ const ref=XLSX.utils.encode_cell({r:r+1,c});
+          if(!ws[ref]) ws[ref]={t:'s',v:''}; ws[ref].s=sCelda(claveCelda(r,c),izqCols.includes(c),faltaCelda(r,c)); }));
+        ws['!cols']=cab.map((_,i)=>({wch:(anchos&&anchos[i])||(i===0?34:16)}));
+        return ws;
+      };
+      const wb=XLSX.utils.book_new(), F=ultimo.filas;
+      const FN=filasNomInforme(), FA=filasAntInforme();
+      const wsN=hoja(COLS_XLS, FN.map(filaXls), (r,c)=>colXls(c)<0?null:claveNom(FN[r],colXls(c)), [32,12,14,14,18,12,16,14,14,70],[0,9],(r,c)=>{ const k=colXls(c); if(k<0) return false; return esFalta(FN[r],k) || (esCambio(FN[r],k)?'cambio':false); });
+      if(FN.length!==F.length) XLSX.utils.sheet_add_aoa(wsN,[[],['Filtro aplicado: '+textoSel('fNom')]],{origin:-1});
+      XLSX.utils.book_append_sheet(wb, wsN, 'Nómina');
+      XLSX.utils.book_append_sheet(wb, hoja(['SITUACIÓN DE LA CREDENCIAL','CANTIDAD','PORCENTAJE'], resumenCred(), ()=>null,[44,12,12]), 'Credenciales');
+      const wsA=hoja(['APELLIDO Y NOMBRE','DNI','INGRESO','FECHA ACTUAL','ANTIGÜEDAD'], FA.map(filaAnt), r=>claveTramo(FA[r]));
+      if(FA.length!==F.length) XLSX.utils.sheet_add_aoa(wsA,[[],['Filtro aplicado: '+textoSel('fAnt')]],{origin:-1});
+      XLSX.utils.book_append_sheet(wb, wsA, 'Antigüedad');
+      XLSX.utils.book_append_sheet(wb, hoja(['ANTIGÜEDAD','CANTIDAD','PORCENTAJE'], resumenAnt(), ()=>null), 'Resumen antigüedad');
+      const filasDocs=[]; F.forEach(f=>((f.ref&&f.ref.archivos)||[]).forEach(a=>filasDocs.push([f.nombre,(a.sub?a.sub+'/':'')+a.nombre,TIPOS[a.tipo],resumenDatos(a)])));
+      XLSX.utils.book_append_sheet(wb, hoja(['APELLIDO Y NOMBRE','ARCHIVO','TIPO','DATOS LEÍDOS'], filasDocs, ()=>null,[34,50,22,60],[0,1,3]), 'Documentos');
+      if(cob && (cob.hayArt||cob.haySv)){
+        const fc=filasCobInforme();
+        const wsC=hoja(['APELLIDO Y NOMBRE','DNI','ART','SEGURO DE VIDA'], fc.map(f=>[f.nombre,f.dni,siNo(f.art),siNo(f.sv)]), ()=>null,null,[0],
+          (r,c)=>(c===2&&fc[r].art===false)||(c===3&&fc[r].sv===false));
+        if(alcanceCob()==='filtrada' && descFiltro()) XLSX.utils.sheet_add_aoa(wsC,[[],['Filtro aplicado: '+descFiltro()]],{origin:-1});
+        XLSX.utils.book_append_sheet(wb, wsC, 'Cobertura');
+        XLSX.utils.book_append_sheet(wb, hoja(['COBERTURA','CANTIDAD','PORCENTAJE'], resumenCob(), ()=>null), 'Resumen cobertura');
+      }
+      const lect=XLSX.utils.aoa_to_sheet([['Fecha de corte: '+fmtFecha(opts.corte)],[]].concat(parrafos('textoCred').map(p=>[p])).concat([[]]).concat(parrafos('textoAnt').map(p=>[p]))
+        .concat(cob&&(cob.hayArt||cob.haySv)?[[]].concat(parrafos('textoCob').map(p=>[p])):[]));
+      Object.keys(lect).forEach(k=>{ if(k[0]!=='!') lect[k].s={alignment:{wrapText:true,vertical:'top'}}; });
+      lect['!cols']=[{wch:110}];
+      XLSX.utils.book_append_sheet(wb, lect, 'Lectura');
+      descargar(XLSX.write(wb,{bookType:'xlsx',type:'array'}), nombreArchivo('xlsx'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }catch(e){ avisarError('Excel',e); }
+  };
+
+  function prepararPdf(){
+    if(!window.jspdf || !window.jspdf.jsPDF) throw new Error('no se cargó la librería de PDF (revisá la conexión a internet).');
+    const J=window.jspdf.jsPDF;
+    if(typeof J.API.autoTable!=='function'){
+      if(typeof window.applyPlugin==='function') window.applyPlugin(J);
+      else throw new Error('no se cargó el complemento de tablas para PDF (revisá la conexión a internet).');
+    }
+    return J;
+  }
+  $('btnPdf').onclick=()=>{
+    if(!ultimo) return; $('msgDesc').textContent='';
+    try{
+      const J=prepararPdf(), F=ultimo.filas;
+      const doc=new J({orientation:'landscape', unit:'mm', format:'a4'});
+      const M=10;
+      const rgb=clave=>{ const h=hexDe(clave); return h?[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]:null; };
+      const base={theme:'grid', styles:{fontSize:7.5, halign:'center', valign:'middle', cellPadding:1.4, lineColor:[150,150,150], lineWidth:0.2, textColor:[20,20,20], fillColor:[255,255,255]},
+                  headStyles:{fillColor:[31,78,121], textColor:255, fontSize:7}, alternateRowStyles:{fillColor:[255,255,255]}, margin:{left:M,right:M}};
+      const titulo=(t,y)=>{ doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(31,78,121); doc.text(t,M,y); doc.setTextColor(20,20,20); };
+      const leyenda=(items,y)=>{ doc.setFont('helvetica','normal'); doc.setFontSize(8); let x=M;
+        items.forEach(([clave,t])=>{ doc.setFillColor(...(rgb(clave)||[255,255,255])); doc.setDrawColor(150); doc.rect(x,y-3,4,4,'FD'); doc.text(t,x+6,y); x+=doc.getTextWidth(t)+14; }); };
+      const textoJust=(lista,y)=>{ doc.setFont('times','normal'); doc.setFontSize(11);
+        lista.forEach(p=>{ const w=doc.internal.pageSize.getWidth(), h=doc.internal.pageSize.getHeight();
+          const n=doc.splitTextToSize(p,w-2*M).length; if(y+n*5>h-12){ doc.addPage(); y=16; }
+          doc.text(p,M,y,{maxWidth:w-2*M,align:'justify'}); y+=n*5+4; }); return y; };
+
+      titulo('Nómina del personal (GS)',14);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); const FN=filasNomInforme(), FA=filasAntInforme();
+      doc.text(`Fecha de corte: ${fmtFecha(opts.corte)}   -   Total de GS: ${ultimo.total}`+(FN.length!==F.length?`   -   Filtro: ${textoSel('fNom')} (${FN.length})`:''), M, 20);
+      leyenda([['amarillo','Vence dentro del aviso previo'],['rojo','Vencido'],['credDpgsp','Credencial DPGSP'],['credSasa','Comprobante SASA'],['ingIgual','Ingresos coinciden'],['ingDistinto','Ingresos distintos']],26);
+      doc.autoTable(Object.assign({}, base, {startY:30, head:[COLS_NOM], body:FN.length?FN.map(filaNom):[['Nadie cumple con el filtro elegido.'].concat(Array(COLS_NOM.length-1).fill(''))],
+        columnStyles:{0:{halign:'left',cellWidth:40},8:{halign:'left',cellWidth:80}},
+        didParseCell:d=>{ if(d.section!=='body'||!FN.length) return; const f=FN[d.row.index];
+          const c=rgb(claveNom(f,d.column.index)); if(c) d.cell.styles.fillColor=c;
+          if(esFalta(f,d.column.index)){ d.cell.styles.textColor=[176,0,32]; d.cell.styles.fontStyle='bold'; }
+          else if(esCambio(f,d.column.index)){ d.cell.styles.textColor=[47,111,219]; d.cell.styles.fontStyle='bold'; } }}));
+
+      doc.addPage(); titulo('Situación de las credenciales',15);
+      doc.autoTable(Object.assign({}, base, {startY:20, styles:Object.assign({},base.styles,{fontSize:9}), head:[['Situación','Cantidad','Porcentaje']], body:resumenCred(), tableWidth:150, columnStyles:{0:{halign:'left'}}}));
+      textoJust(parrafos('textoCred'), doc.lastAutoTable.finalY+9);
+
+      doc.addPage('a4','portrait'); titulo('Antigüedad del personal',15);
+      leyenda([['ant0','Menos de un año'],['ant1','Entre uno y dos años'],['ant2','Más de dos años']],21);
+      doc.autoTable(Object.assign({}, base, {startY:25, styles:Object.assign({},base.styles,{fontSize:8}), head:[['APELLIDO Y NOMBRE','DNI','INGRESO','FECHA ACTUAL','ANTIGÜEDAD']],
+        body:FA.length?FA.map(filaAnt):[['Nadie cumple con el filtro elegido.','','','','']], columnStyles:{0:{halign:'left'}},
+        didParseCell:d=>{ if(d.section!=='body'||!FA.length) return; const c=rgb(claveTramo(FA[d.row.index])); if(c) d.cell.styles.fillColor=c; }}));
+      textoJust(parrafos('textoAnt'), doc.lastAutoTable.finalY+9);
+
+      if(cob && (cob.hayArt||cob.haySv)){
+        doc.addPage('a4','portrait'); titulo('Cobertura de ART y seguro de vida',15);
+        doc.autoTable(Object.assign({}, base, {startY:20, styles:Object.assign({},base.styles,{fontSize:9}), head:[['Cobertura','Cantidad','Porcentaje']], body:resumenCob(), tableWidth:120, columnStyles:{0:{halign:'left'}}}));
+        let y=textoJust(parrafos('textoCob'), doc.lastAutoTable.finalY+9);
+        const fc=filasCobInforme();
+        if(alcanceCob()==='filtrada' && descFiltro()){ doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.text(`Tabla filtrada: ${descFiltro()} (${fc.length} de ${cob.total} GS)`,M,y); y+=4; }
+        doc.autoTable(Object.assign({}, base, {startY:y+2, styles:Object.assign({},base.styles,{fontSize:8}), head:[['APELLIDO Y NOMBRE','DNI','ART','SEGURO DE VIDA']],
+          body: fc.length? fc.map(f=>[f.nombre,f.dni,siNo(f.art),siNo(f.sv)]) : [['Ningún GS cumple con el filtro elegido.','','','']],
+          columnStyles:{0:{halign:'left'}},
+          didParseCell:d=>{ if(d.section!=='body'||!fc.length) return; const f=fc[d.row.index];
+            if((d.column.index===2&&f.art===false)||(d.column.index===3&&f.sv===false)){ d.cell.styles.textColor=[176,0,32]; d.cell.styles.fontStyle='bold'; } }}));
+      }
+      descargar(doc.output('blob'), nombreArchivo('pdf'), 'application/pdf');
+    }catch(e){ avisarError('PDF',e); }
+  };
+}
+</script>
+</body>
+</html>
